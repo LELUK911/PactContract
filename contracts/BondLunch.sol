@@ -256,6 +256,9 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
             revert("Bond not in sell!");
         }
     }
+    function deleteLunch(uint _id, uint index)external nonReentrant whenNotPaused{
+        _deleteLunch(msg.sender, _id, index);
+    }
 
     function onERC1155Received(
         address operator,

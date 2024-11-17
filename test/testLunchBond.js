@@ -18,7 +18,7 @@ describe("Test di lancio", () => {
 
 
         const BondLunch = await ethers.getContractFactory('BondLunch');
-        contractLunch = await BondLunch.deploy(bondContractAddress) 
+        contractLunch = await BondLunch.deploy(bondContractAddress)
         contractLunchAddress = await contractLunch.getAddress()
         const MockToken = await ethers.getContractFactory('MockToken');
         mockDai = await MockToken.deploy(ethers.parseUnits('9000000000000'), 'Dai Token', 'DAI');
@@ -64,70 +64,87 @@ describe("Test di lancio", () => {
             ).to.emit(bondContract, "BondCreated");
         }
     });
-    it("Lunch new amazing bond",async ()=>{
+    it("Lunch new amazing bond", async () => {
 
         await newBondFunction()
         await newBondFunction()
 
         await bondContract.connect(iusser).setApprovalForAll(contractLunchAddress, true);
 
-        await expect(contractLunch.connect(iusser).lunchNewBond('1','100')).to.emit(contractLunch,'IncrementBondInLunc')
+        await expect(contractLunch.connect(iusser).lunchNewBond('1', '100')).to.emit(contractLunch, 'IncrementBondInLunc')
 
         // verifiche
         const bondList = await contractLunch.connect(iusser).showBondLunchList()
         expect(bondList[0].toString()).eq("1");
-        
-        expect( await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('100');
+
+        expect(await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('100');
     })
-    it("User can buy some bond? PLS!!!!!",async ()=>{
+    it("User can buy some bond? PLS!!!!!", async () => {
         // operazioni preliminari
         await newBondFunction()
         await newBondFunction()
         await bondContract.connect(iusser).setApprovalForAll(contractLunchAddress, true);
-        await expect(contractLunch.connect(iusser).lunchNewBond('1','100')).to.emit(contractLunch,'IncrementBondInLunc')
+        await expect(contractLunch.connect(iusser).lunchNewBond('1', '100')).to.emit(contractLunch, 'IncrementBondInLunc')
         // test
         const sizeBond = ethers.parseUnits('10000');
-        await mockDai.connect(owner).transfer(user1,sizeBond);
-        await mockDai.connect(user1).approve(contractLunchAddress,sizeBond);
-        await expect(contractLunch.connect(user1).buyBond(1,0,10)).to.emit(contractLunch,'BuyBond')
+        await mockDai.connect(owner).transfer(user1, sizeBond);
+        await mockDai.connect(user1).approve(contractLunchAddress, sizeBond);
+        await expect(contractLunch.connect(user1).buyBond(1, 0, 10)).to.emit(contractLunch, 'BuyBond')
         await contractLunch.connect(user1).withdrawBondBuy(1)
         // verifiche
-        const balanceBond = await bondContract.connect(user1).balanceOf(user1,1);
+        const balanceBond = await bondContract.connect(user1).balanceOf(user1, 1);
         expect(balanceBond.toString()).eq('10');
-        expect( await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('90');
-        expect ( await mockDai.connect(owner).balanceOf(contractLunchAddress)).eq(sizeBond);
+        expect(await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('90');
+        expect(await mockDai.connect(owner).balanceOf(contractLunchAddress)).eq(sizeBond);
         // operazione post verifiche
-        await expect(contractLunch.connect(iusser).withdrawToken(await mockDai.getAddress())).to.emit(contractLunch,'WitrawToken');
-        const contractERC20balance =  await mockDai.connect(owner).balanceOf(contractLunchAddress)
-        expect ( contractERC20balance.toString()).eq('0');
+        await expect(contractLunch.connect(iusser).withdrawToken(await mockDai.getAddress())).to.emit(contractLunch, 'WitrawToken');
+        const contractERC20balance = await mockDai.connect(owner).balanceOf(contractLunchAddress)
+        expect(contractERC20balance.toString()).eq('0');
     })
-    it("Can increas bond in lunch ? ",async ()=>{
+    it("Can increas bond in lunch ? ", async () => {
         await newBondFunction()
         await newBondFunction()
         await bondContract.connect(iusser).setApprovalForAll(contractLunchAddress, true);
-        await expect(contractLunch.connect(iusser).lunchNewBond('1','90')).to.emit(contractLunch,'IncrementBondInLunc')
-        expect( await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('90');
+        await expect(contractLunch.connect(iusser).lunchNewBond('1', '90')).to.emit(contractLunch, 'IncrementBondInLunc')
+        expect(await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('90');
         let bondList = await contractLunch.connect(iusser).showBondLunchList()
         expect(bondList[0].toString()).eq("1");
-        let balanceBond = await bondContract.connect(iusser).balanceOf(contractLunchAddress,1);
+        let balanceBond = await bondContract.connect(iusser).balanceOf(contractLunchAddress, 1);
         expect(balanceBond.toString()).eq('90');
 
-        await contractLunch.connect(iusser).lunchNewBond('1','5')
-        expect( await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('95');
+        await contractLunch.connect(iusser).lunchNewBond('1', '5')
+        expect(await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('95');
         bondList = await contractLunch.connect(iusser).showBondLunchList()
         expect(bondList[0].toString()).eq("1");
-        balanceBond = await bondContract.connect(iusser).balanceOf(contractLunchAddress,1);
+        balanceBond = await bondContract.connect(iusser).balanceOf(contractLunchAddress, 1);
         expect(balanceBond.toString()).eq('95');
     })
-    it("Only iusser can lunch bond + some errore",async ()=>{
+    it("Only iusser can lunch bond + some errore", async () => {
         await newBondFunction()
         await newBondFunction()
-        await bondContract.connect(iusser).safeTransferFrom(iusser,user1,1,50,"0x")
+        await bondContract.connect(iusser).safeTransferFrom(iusser, user1, 1, 50, "0x")
         await bondContract.connect(user1).setApprovalForAll(contractLunchAddress, true);
-        await expect(contractLunch.connect(user1).lunchNewBond('1','50')).to.be.rejectedWith("Only iusser Bond can lunch thi function")
+        await expect(contractLunch.connect(user1).lunchNewBond('1', '50')).to.be.rejectedWith("Only iusser Bond can lunch thi function")
         await bondContract.connect(iusser).setApprovalForAll(contractLunchAddress, true);
-        await expect(contractLunch.connect(iusser).lunchNewBond('1','0')).to.be.rejectedWith("Set correct amount")
-        await expect(contractLunch.connect(iusser).lunchNewBond('1','110')).to.be.rejectedWith("Set correct amount")
+        await expect(contractLunch.connect(iusser).lunchNewBond('1', '0')).to.be.rejectedWith("Set correct amount")
+        await expect(contractLunch.connect(iusser).lunchNewBond('1', '110')).to.be.rejectedWith("Set correct amount")
 
+    })
+    it("Only User can delete Lunch", async () => {
+        await newBondFunction()
+        await newBondFunction()
+        await newBondFunction()
+
+        await bondContract.connect(iusser).setApprovalForAll(contractLunchAddress, true);
+        await bondContract.connect(iusser).setApprovalForAll(contractLunchAddress, true); 
+        await expect(contractLunch.connect(iusser).lunchNewBond('1', '100')).to.emit(contractLunch, 'IncrementBondInLunc')
+        await expect(contractLunch.connect(iusser).lunchNewBond('2', '100')).to.emit(contractLunch, 'IncrementBondInLunc')
+        
+        await expect(contractLunch.connect(iusser).deleteLunch(1, 0)).to.emit(contractLunch, 'DeleteLunch')
+
+        await expect(contractLunch.connect(owner).deleteLunch(2, 1)).to.be.rejectedWith("Only iusser Bond can lunch this function")
+
+
+        
     })
 })

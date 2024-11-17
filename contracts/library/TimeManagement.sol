@@ -13,7 +13,12 @@ library TimeManagment{
     function checkDatalistAndExpired(uint[] memory dataList, uint expireData) internal view returns (bool){
         uint actualData = block.timestamp;
         for(uint i=1; i < dataList.length;i++){
-            if(dataList[i-1]<actualData && dataList[i] < dataList[i-1] ){
+
+            if(dataList[i]<= actualData){
+                return false;
+            }
+
+            if(i>0 && dataList[i]<= dataList[i-1]){
                 return false;
             }
         }

@@ -35,17 +35,6 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
     // il bilancio di ogni utente per token specifici
     mapping(address => mapping(address => uint)) internal balanceForToken;
 
-    /*
-    // struttura dei bond lanciati con id e quantita
-    struct BondLunc {
-        uint id;
-        uint amount;
-    }
-    // lista dei bond lanciati per ogni utente con dettagli
-    mapping(address => mapping(uint=>BondLunc)) internal listBondLunch;
-    // lista dei soli bond in vendità senza dettagli
-    mapping(address => uint[]) internal listBondBuy;
-    */
     // quantità di bond in vendità  nel contratto  // vale da doppio controllo
     mapping(uint => uint) internal amountInSell;
     // lista di bond in vendità nel contratto
@@ -55,6 +44,10 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
 
     constructor(address _bondContract) Ownable(msg.sender) {
         bondContract = _bondContract;
+    }
+
+    function balanceIssuer(address _user,address _token) public view returns (uint amount){
+        amount = balanceForToken[_user][_token];
     }
 
     function showAmountInSellForBond(uint _id) public view returns (uint amount){
@@ -86,20 +79,12 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
         }
         return (type(uint).max, false);
     }
-    /*
-    function _srcIndexLunchList(
-        address _user,
-        uint _id
-    ) internal view returns (uint) {
-        for (uint i = 0; i < listBondLunch[_user].length; i++) {
-            if (listBondLunch[_user][i].id == _id) {
-                return i;
-            }
-        }
-        return (type(uint).max);
-    }
-    */
 
+    function findIndexBond(uint _id) public view returns(uint){
+        (uint index,) = _srcIndexListBonds(_id);
+        return index;
+    }
+    
     event IncrementBondInLunc(
         address indexed _user,
         uint indexed _id,
@@ -122,19 +107,6 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
         require(_amount > 0, "Set correct amount");
         require(_amount <= bondDetail.amount, "Set correct amount");
         _depositBond(_user, address(this), _id, _amount);
-        /*
-        //uint responseSrc = _srcIndexLunchList(_user, _id);
-        if (responseSrc == type(uint).max) {
-            listBondLunch[_user].push(BondLunc(_id, _amount));
-            amountInSell[_id] = _amount;
-            listBonds.push(_id);
-            emit NewBondInLunch(_user, _id, _amount);
-        }else{
-            listBondLunch[_user][responseSrc].amount +=_amount;
-            amountInSell[_id] += _amount;
-            emit IncrementBondInLunc(_user, _id, _amount);
-        }
-        */
         amountInSell[_id] = IERC1155(bondContract).balanceOf(
             address(this),
             _id
@@ -187,16 +159,7 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
             address(this),
             _amount * bondDetail.sizeLoan
         );
-        /*
-        uint indexUpdate = _srcIndexLunchList(iussuer, _id);
         amountInSell[_id] -= _amount;
-        listBondLunch[iussuer][indexUpdate].amount -= _amount;
-        balanceForToken[iussuer][tokenLoan] += _amount * sizeLoan;
-        _depositBond(address(this), _user, _id, _amount);
-        */
-
-        amountInSell[_id] -= _amount;
-        //_depositBond(address(this), _user, _id, _amount);
         balanceForToken[bondDetail.issuer][bondDetail.tokenLoan] +=
             _amount *
             bondDetail.sizeLoan;
@@ -205,6 +168,11 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
     }
 
     mapping(address => mapping(uint => uint)) internal bondBuyForUser;
+
+    function showBondForWithdraw(address _user,uint _id) external view returns(uint amount){
+        amount = bondBuyForUser[_user][_id];
+    }
+
     function withdrawBondBuy(uint _id) external nonReentrant whenNotPaused {
         uint amount = bondBuyForUser[msg.sender][_id];
         bondBuyForUser[msg.sender][_id] = 0;
@@ -224,6 +192,7 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
         emit WitrawToken(_user, _token, amount);
     }
 
+
     function _moveErc20(
         address _token,
         address _from,
@@ -241,16 +210,14 @@ contract BondLunch is Pausable, ReentrancyGuard, Ownable {
             "Only iusser Bond can lunch this function"
         );
         require(amountInSell[_id] > 0, "Bond is not currently in sale");
-        //_depositBond(_user, address(this), _id, _amount);
-        /*
-        listBondLunch[_user][index].id = type(uint).max;
-        listBondLunch[_user][index].amount = 0;
-        */
+        uint amountRefound = amountInSell[_id];
         amountInSell[_id] = 0;
         (, bool response) = _srcIndexListBonds(_id);
         if (response) {
             listBonds[index] = listBonds[listBonds.length - 1];
             listBonds.pop();
+            // Da verificare bene le implicazioni e vurnerabilità
+            _depositBond(address(this),_user, _id, amountRefound);
             emit DeleteLunch(_user, _id);
         } else {
             revert("Bond not in sell!");

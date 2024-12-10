@@ -90,8 +90,10 @@ describe("Test di lancio", () => {
         await mockDai.connect(owner).transfer(user1, sizeBond);
         await mockDai.connect(user1).approve(contractLunchAddress, sizeBond);
         await expect(contractLunch.connect(user1).buyBond(1, 0, 10)).to.emit(contractLunch, 'BuyBond')
+        expect((await contractLunch.connect(user1).showBondForWithdraw(user1,1)).toString()).eq('10')
         await contractLunch.connect(user1).withdrawBondBuy(1)
         // verifiche
+        expect(await contractLunch.connect(iusser).balanceIssuer(iusser,mockDai)).eq(sizeBond)
         const balanceBond = await bondContract.connect(user1).balanceOf(user1, 1);
         expect(balanceBond.toString()).eq('10');
         expect(await contractLunch.connect(owner).showAmountInSellForBond('1')).eq('90');
@@ -139,12 +141,11 @@ describe("Test di lancio", () => {
         await bondContract.connect(iusser).setApprovalForAll(contractLunchAddress, true); 
         await expect(contractLunch.connect(iusser).lunchNewBond('1', '100')).to.emit(contractLunch, 'IncrementBondInLunc')
         await expect(contractLunch.connect(iusser).lunchNewBond('2', '100')).to.emit(contractLunch, 'IncrementBondInLunc')
-        
+        expect ((await contractLunch.connect(iusser).findIndexBond(2)).toString()).eq('1')
+        expect ((await contractLunch.connect(iusser).findIndexBond(1)).toString()).eq('0')
+
         await expect(contractLunch.connect(iusser).deleteLunch(1, 0)).to.emit(contractLunch, 'DeleteLunch')
-
         await expect(contractLunch.connect(owner).deleteLunch(2, 1)).to.be.rejectedWith("Only iusser Bond can lunch this function")
-
-
-        
+        expect( (await bondContract.connect(iusser).balanceOf(iusser,1)).toString()).eq('100') 
     })
 })

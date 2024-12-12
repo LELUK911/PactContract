@@ -15,10 +15,21 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
     address internal bondContract;
     address internal money; // da decidere se weth o usdc
     uint internal constant minPeriodAuction = 7 days;
+    uint internal contractBalance;
 
-    constructor(address _bondContrac, address _money) Ownable(msg.sender) {
+    constructor(
+        address _bondContrac,
+        address _money,
+        uint _fixedFee,
+        uint _priceThreshold,
+        uint _dinamicFee
+    ) Ownable(msg.sender) {
         bondContract = _bondContrac;
         money = _money;
+
+        feeSystem.fixedFee = _fixedFee;
+        feeSystem.priceThreshold = _priceThreshold;
+        feeSystem.dinamicFee = _dinamicFee;
     }
 
     struct Auction {
@@ -32,9 +43,23 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
         bool open;
     }
 
+    struct FeeSystem {
+        uint fixedFee;
+        uint priceThreshold;
+        uint dinamicFee;
+    }
+
+    struct FeeSeller {
+        uint[] echelons;
+        uint[] fees;
+    }
+    FeeSeller internal feeSeller;
+
+    FeeSystem internal feeSystem;
+
     Auction[] internal auctions;
 
-    mapping(address => uint) balanceUser;
+    mapping(address => uint) balanceUser; // non mi convince
     mapping(address => uint) lockBalance;
 
     event NewAuction(address indexed _owner, uint indexed _id, uint _amount);
@@ -50,18 +75,26 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
         uint indexed amount
     );
     event WithDrawMoney(address indexed _user, uint indexed amount);
+    event PaidFee(uint _amount);
 
     modifier outIndex(uint _index) {
         require(_index < auctions.length, "digit correct index for array");
         _;
     }
-
     function showAuctionsList() public view returns (Auction[] memory) {
         return auctions;
     }
     function showAuction(uint _index) public view returns (Auction memory) {
         return auctions[_index];
     }
+    function setFeeSeller(
+        uint[] memory _echelons,
+        uint[] memory _fees
+    ) external onlyOwner {
+        feeSeller.echelons = _echelons;
+        feeSeller.fees = _fees;
+    }
+
     function newAcutionBond(
         uint _id,
         uint _amount,
@@ -149,15 +182,38 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
             auctions[_index].pot < _amount,
             "This pot is low then already pot"
         );
+        require(auctions[_index].owner != _player, "Owner can't pot");
+        coolDownControl(_player, _index);
         // deposito i token
         _depositErc20(_player, address(this), _amount);
-        lockBalance[_player] += _amount;
-        balanceUser[_player] += _amount;
+        uint amountLessFee = _paidPotFee(_amount);
+        lockBalance[_player] += amountLessFee;
+        balanceUser[_player] += amountLessFee; //non mi convince
         // aggiorno i dati
         //prima devo sloccare i soldi al altro player
         lockBalance[auctions[_index].player] -= auctions[_index].pot;
         auctions[_index].player = _player;
-        auctions[_index].pot = _amount;
+        auctions[_index].pot = amountLessFee;
+    }
+    function _paidPotFee(uint _amount) internal returns (uint) {
+        if (_amount < feeSystem.priceThreshold) {
+            contractBalance += feeSystem.fixedFee;
+            emit PaidFee(_amount);
+            return _amount - feeSystem.fixedFee;
+        } else {
+            contractBalance += calculateBasisPoints(
+                _amount,
+                feeSystem.dinamicFee
+            );
+            emit PaidFee(_amount);
+            return _amount - feeSystem.fixedFee;
+        }
+    }
+    function calculateBasisPoints(
+        uint256 amount,
+        uint256 bps
+    ) internal pure returns (uint) {
+        return (amount * bps) / 10000; // 10000 bps = 100%
     }
     function _depositErc20(address _from, address _to, uint _amount) internal {
         SafeERC20.safeTransferFrom(IERC20(money), _from, _to, _amount);
@@ -174,7 +230,7 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
 
         address newOwner = auctions[_index].player;
         address oldOwner = auctions[_index].owner;
-        uint pot = auctions[_index].pot;
+        uint pot = _paidSellFee(auctions[_index].pot);
 
         auctions[_index].pot = 0;
         auctions[_index].owner = newOwner;
@@ -184,6 +240,25 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
 
         balanceUser[oldOwner] += pot;
     }
+
+    function _paidSellFee(uint _amount) internal returns (uint) {
+        for (uint i; i < feeSeller.echelons.length; i++) {
+            if (_amount < feeSeller.echelons[i]) {
+                uint fee = calculateBasisPoints(_amount, feeSeller.fees[i]);
+                contractBalance += fee;
+                emit PaidFee(fee);
+                return _amount - fee;
+            }
+        }
+        uint _fee = calculateBasisPoints(
+            _amount,
+            feeSeller.fees[feeSeller.fees.length - 1]
+        );
+        contractBalance += _fee;
+        emit PaidFee(_fee);
+        return _amount - _fee;
+    }
+
     function _withDrawBond(address _owner, uint _index) internal {
         require(_owner == auctions[_index].owner, "Not Owner");
         require(
@@ -219,5 +294,40 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
 
         balanceUser[_user] -= _amount;
         _depositErc20(address(this), _user, _amount);
+    }
+
+    //Freez system
+
+    // cooldown
+    uint internal coolDown;
+
+    function setCoolDown(uint _coolDown) external onlyOwner {
+        coolDown = _coolDown;
+    }
+
+    mapping(address => mapping(uint => uint)) internal lastPotTime;
+
+    function coolDownControl(address _user, uint _id) internal {
+        require(
+            lastPotTime[_user][_id] + coolDown <= block.timestamp,
+            "Wait for pot again"
+        );
+        lastPotTime[_user][_id] = block.timestamp;
+    }
+
+     function showFeesSystem() public view returns (FeeSystem memory) {
+        return feeSystem;
+    }
+
+    function showFeesSeller() public view returns (FeeSeller memory) {
+        return feeSeller;
+    }
+
+
+
+    function withdrawFees()external onlyOwner(){
+        uint amount = contractBalance;
+        contractBalance=0;
+        _depositErc20(address(this), owner() ,amount);
     }
 }

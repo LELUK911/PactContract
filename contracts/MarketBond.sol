@@ -315,7 +315,7 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
         lastPotTime[_user][_id] = block.timestamp;
     }
 
-     function showFeesSystem() public view returns (FeeSystem memory) {
+    function showFeesSystem() public view returns (FeeSystem memory) {
         return feeSystem;
     }
 
@@ -323,11 +323,9 @@ contract BondMarket is Pausable, ReentrancyGuard, Ownable {
         return feeSeller;
     }
 
-
-
-    function withdrawFees()external onlyOwner(){
+    function withdrawFees() external onlyOwner {
         uint amount = contractBalance;
-        contractBalance=0;
-        _depositErc20(address(this), owner() ,amount);
+        contractBalance = 0;
+        _depositErc20(address(this), owner(), amount);
     }
 }

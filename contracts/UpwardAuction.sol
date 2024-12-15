@@ -8,16 +8,23 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-
 import "./interface/Ibond.sol";
-contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Receiver {
+
+import {console} from "hardhat/console.sol";
+contract UpwardAuction is
+    ERC165,
+    Pausable,
+    ReentrancyGuard,
+    Ownable,
+    IERC1155Receiver
+{
     address internal bondContract;
     address internal money; // da decidere se weth o usdc
     uint internal constant minPeriodAuction = 7 days;
     uint internal contractBalance;
+    uint internal coolDown;
 
     constructor(
         address _bondContrac,
@@ -44,25 +51,22 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
         address player;
         bool open;
     }
-
     struct FeeSystem {
         uint fixedFee;
         uint priceThreshold;
         uint dinamicFee;
     }
-
     struct FeeSeller {
         uint[] echelons;
         uint[] fees;
     }
     FeeSeller internal feeSeller;
-
     FeeSystem internal feeSystem;
-
     Auction[] internal auctions;
 
     mapping(address => uint) balanceUser; // non mi convince
     mapping(address => uint) lockBalance;
+    mapping(address => mapping(uint => uint)) internal lastPotTime;
 
     event NewAuction(address indexed _owner, uint indexed _id, uint _amount);
     event newInstalmentPot(
@@ -96,7 +100,6 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
         feeSeller.echelons = _echelons;
         feeSeller.fees = _fees;
     }
-
     function newAcutionBond(
         uint _id,
         uint _amount,
@@ -181,7 +184,7 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
         );
         require(auctions[_index].open == true, "This auction is close");
         require(
-            auctions[_index].pot < _amount,
+            auctions[_index].pot < _calcPotFee(_amount), //? Esiste una soluzione migliore?!
             "This pot is low then already pot"
         );
         require(auctions[_index].owner != _player, "Owner can't pot");
@@ -197,6 +200,14 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
         auctions[_index].player = _player;
         auctions[_index].pot = amountLessFee;
     }
+    function _calcPotFee(uint _amount) internal view returns (uint) {
+        if (_amount < feeSystem.priceThreshold) {
+            return _amount - feeSystem.fixedFee;
+        } else {
+            return
+                _amount - calculateBasisPoints(_amount, feeSystem.dinamicFee);
+        }
+    }
     function _paidPotFee(uint _amount) internal returns (uint) {
         if (_amount < feeSystem.priceThreshold) {
             contractBalance += feeSystem.fixedFee;
@@ -208,7 +219,8 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
                 feeSystem.dinamicFee
             );
             emit PaidFee(_amount);
-            return _amount - feeSystem.fixedFee;
+            return
+                _amount - calculateBasisPoints(_amount, feeSystem.dinamicFee);
         }
     }
     function calculateBasisPoints(
@@ -222,10 +234,14 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
     }
     // funzione per chiudere l'auction alla fine del processo
     function _closeAuction(address _owner, uint _index) internal {
-        require(_owner == auctions[_index].owner, "Not Owner");
         require(
-            auctions[_index].expired >= block.timestamp,
+            auctions[_index].expired < block.timestamp,
             "This auction is not expired"
+        );
+        require(
+            _owner == auctions[_index].owner ||
+                _owner == auctions[_index].player||_owner ==owner(),//? per ora lascio la possibilità al owner di forzare la chiusura di un asta per incassare le fees
+            "Not Owner"
         );
         require(auctions[_index].open == true, "This auction already close");
         auctions[_index].open = false;
@@ -242,7 +258,6 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
 
         balanceUser[oldOwner] += pot;
     }
-
     function _paidSellFee(uint _amount) internal returns (uint) {
         for (uint i; i < feeSeller.echelons.length; i++) {
             if (_amount < feeSeller.echelons[i]) {
@@ -260,13 +275,12 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
         emit PaidFee(_fee);
         return _amount - _fee;
     }
-
     function _withDrawBond(address _owner, uint _index) internal {
         require(_owner == auctions[_index].owner, "Not Owner");
         require(
-            auctions[_index].expired >= block.timestamp,
+            auctions[_index].expired < block.timestamp,
             "This auction is not expired"
-        );// penso sia da correggere
+        ); // penso sia da correggere
         require(auctions[_index].open == false, "This auction is Open");
 
         uint amountBond = auctions[_index].amount;
@@ -293,50 +307,35 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
             lockBalance[_user] <= balanceUser[_user] - _amount,
             "Incorrect Operation"
         );
-
         balanceUser[_user] -= _amount;
-
         SafeERC20.safeTransfer(IERC20(money), _user, _amount);
-
-        
     }
-
     //Freez system
-
-    // cooldown
-    uint internal coolDown;
-
     function setCoolDown(uint _coolDown) external onlyOwner {
         coolDown = _coolDown;
     }
-
-    mapping(address => mapping(uint => uint)) internal lastPotTime;
-
     function coolDownControl(address _user, uint _id) internal {
         require(
-            lastPotTime[_user][_id] + coolDown <= block.timestamp,
+            lastPotTime[_user][_id] + coolDown < block.timestamp,
             "Wait for pot again"
         );
         lastPotTime[_user][_id] = block.timestamp;
     }
-
     function showFeesSystem() public view returns (FeeSystem memory) {
         return feeSystem;
     }
-
     function showFeesSeller() public view returns (FeeSeller memory) {
         return feeSeller;
     }
-
+    // ? Non so se la lascero ma per ora mi serve in fase di testing
+    function showBalanceFee() external view returns (uint) {
+        return contractBalance;
+    }
     function withdrawFees() external onlyOwner {
         uint amount = contractBalance;
         contractBalance = 0;
-        _depositErc20(address(this), owner(), amount);
+        SafeERC20.safeTransfer(IERC20(money), owner(), amount);
     }
-
-
-
-
     // Funzione per ricevere singoli trasferimenti ERC1155
     function onERC1155Received(
         address operator,
@@ -348,7 +347,6 @@ contract UpwardAuction is ERC165,Pausable, ReentrancyGuard, Ownable,IERC1155Rece
         // Logica personalizzata (se necessaria)
         return this.onERC1155Received.selector;
     }
-
     // Funzione per ricevere trasferimenti batch ERC1155
     function onERC1155BatchReceived(
         address operator,

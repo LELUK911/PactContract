@@ -294,4 +294,88 @@ describe("Test asta al rialzo", () => {
 
 
     })
+    it("Prohibited operations", async () => {
+        // ! NON IMPOSTO IL COOLDOWN PER FACILITARE I TEST
+        await newBondFunction()
+        await newBondFunction()
+        await newBondFunction()
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const expired = currentTimestamp + 864000; // 10 giorni
+        //? trasferiamo i bond
+        await bondContract.connect(iusser).safeTransferFrom(iusser.address, user1.address, 1, 100, '0x')
+        //? approviamo la spesa
+        await bondContract.connect(user1).setApprovalForAll(contractUpwardAuctionAddress, true);
+        //? Creiamo una nuova asta
+
+        //! OPERAZIONI SU NUOVE ASTE
+
+        //! qui fallisce non possiamo spendere più di quello che abbiamo
+        await expect(contractUpwardAuction.connect(user1).newAcutionBond(1, 101, ethers.parseUnits('99000'), expired)).be.rejected;
+        //! fallisce se l'ammount è 0
+        await expect(contractUpwardAuction.connect(user1).newAcutionBond(1, 0, ethers.parseUnits('99000'), expired)).be.rejectedWith("Set correct bond's amount");
+        //! Fallisce se non è impostato un timestamp di alemeno 7 giorni
+        await expect(contractUpwardAuction.connect(user1).newAcutionBond(1, 100, ethers.parseUnits('99000'), expired - 864000)).be.rejectedWith("Set correct expired period");
+        //! Fallisce se inserisci un prezzo di 0 
+        await expect(contractUpwardAuction.connect(user1).newAcutionBond(1, 100, '0', expired)).be.rejectedWith("Set correct start price");
+        //! Fallisce se sbagli i dati
+        await expect(contractUpwardAuction.connect(user1).newAcutionBond(4, 100, ethers.parseUnits('99000'), expired)).be.rejected
+        //! ------------------------------------------------------------
+
+
+        await expect(contractUpwardAuction.connect(user1).newAcutionBond(1, 100, ethers.parseUnits('99000'), expired)).to.emit(contractUpwardAuction, 'NewAuction')
+
+
+        //? Trasferiamo i fondi ad user2
+        await mockDai.connect(owner).transfer(user2.address, ethers.parseUnits('10100000'))
+        await mockDai.connect(owner).transfer(user1.address, ethers.parseUnits('10100000'))
+        //? approviamo la spesa per le puntante
+        await mockDai.connect(owner).approve(contractUpwardAuctionAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(user1).approve(contractUpwardAuctionAddress, ethers.parseUnits('10100000'))
+        await mockDai.connect(user2).approve(contractUpwardAuctionAddress, ethers.parseUnits('10100000'))
+        //? ------------------------------------
+
+
+        await expect(contractUpwardAuction.connect(owner).instalmentPot(0, ethers.parseUnits('100000'))).to.emit(contractUpwardAuction, 'newInstalmentPot')
+
+        //! OPERAZIONI SULLE PUNTANTE
+
+        //! Il venditore non puo partecipare all'asta
+        await expect(contractUpwardAuction.connect(user1).instalmentPot(0, ethers.parseUnits('101000'))).be.rejectedWith("Owner can't pot")
+        //! Non si puo fare una puntata più piccola di quella attuale
+        await expect(contractUpwardAuction.connect(user2).instalmentPot(0, ethers.parseUnits('9999'))).be.rejectedWith("This pot is low then already pot")
+        // TODO IL COOLDOWN FUNZIONA MA IN QUESTO CASO NON È TESTATO PER SEMPLICITÀ DEI TEST
+
+
+
+        //! OPERAZIONI SULLA CHIUSURA DELL'ASTA prima del expired period
+        //! Il venditore o presunto vincitore non possono chiudere l'asta pruima della scadenza
+        await expect(contractUpwardAuction.connect(user1).closeAuction(0)).be.rejectedWith('This auction is not expired')
+        await expect(contractUpwardAuction.connect(owner).closeAuction(0)).be.rejectedWith('This auction is not expired')
+        //! Non si puo ritirare il bond prima della chiusura ( il titolare)
+        await expect(contractUpwardAuction.connect(user1).withDrawBond(0)).be.rejectedWith('This auction is not expired')
+        //! non puo farlo il presunto vincitore
+        await expect(contractUpwardAuction.connect(owner).withDrawBond(0)).be.rejectedWith('Not Owner')
+        //! Non si possono ritirare i token se si è la puntata più alta
+        await expect(contractUpwardAuction.connect(owner).withdrawMoney(ethers.parseUnits('80000'))).be.rejectedWith("Free balance is low for this operation")
+        //! --------------------------------------------------------------
+
+
+
+        //? mandiamo avanti la chain per le ulteriori verifiche
+        const secondsToAdd = Math.floor(Date.now() / 1000) + (86400 * 80) //? una DATA vale l'altra
+        await ethers.provider.send("evm_increaseTime", [secondsToAdd]);
+        await ethers.provider.send("evm_mine", []);
+
+        //! L'asta è scaduta o chiusa
+        await expect(contractUpwardAuction.connect(user2).instalmentPot(0, ethers.parseUnits('102000'))).be.rejectedWith("This auction is expired")
+        //! ------------------------------------------------
+
+        
+        //! Il venditore alla scadenza non puo ritirare i bond se non chiude l'asta e cambia la proprietà
+        await expect(contractUpwardAuction.connect(user1).withDrawBond(0)).be.rejectedWith('This auction is Open')
+        
+        await expect(contractUpwardAuction.connect(owner).closeAuction(0)).to.emit(contractUpwardAuction, 'CloseAuction')
+
+    })
 })

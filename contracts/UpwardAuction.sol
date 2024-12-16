@@ -177,7 +177,6 @@ contract UpwardAuction is
         uint _index,
         uint _amount
     ) internal {
-        // prima verifichiamo se la puntata è più alta della precedente
         require(
             auctions[_index].expired > block.timestamp,
             "This auction is expired"

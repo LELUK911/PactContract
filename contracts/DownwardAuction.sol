@@ -14,9 +14,8 @@ import "./interface/Ibond.sol";
 
 import {console} from "hardhat/console.sol";
 
-
 //! AGGIUNGERE IL REQUIRE PER LE PAUSE
-contract UpwardAuction is
+contract DownwardAuction is
     ERC165,
     Pausable,
     ReentrancyGuard,
@@ -43,7 +42,7 @@ contract UpwardAuction is
         feeSystem.priceThreshold = _priceThreshold;
         feeSystem.dinamicFee = _dinamicFee;
     }
-
+    // TODO Struttura modificata
     struct Auction {
         address owner;
         uint id;
@@ -53,6 +52,8 @@ contract UpwardAuction is
         uint pot;
         address player;
         bool open;
+        uint tolleratedDiscount; // todo
+        uint[] penality;
     }
     struct FeeSystem {
         uint fixedFee;
@@ -90,16 +91,18 @@ contract UpwardAuction is
         require(_index < auctions.length, "digit correct index for array");
         _;
     }
-    function showAuctionsList() virtual public view returns (Auction[] memory) {
+    function showAuctionsList() public view virtual returns (Auction[] memory) {
         return auctions;
     }
-    function showAuction(uint _index) virtual public view returns (Auction memory) {
+    function showAuction(
+        uint _index
+    ) public view virtual returns (Auction memory) {
         return auctions[_index];
     }
     function setFeeSeller(
         uint[] memory _echelons,
         uint[] memory _fees
-    )virtual external onlyOwner nonReentrant {
+    ) external virtual onlyOwner {
         feeSeller.echelons = _echelons;
         feeSeller.fees = _fees;
     }
@@ -107,31 +110,43 @@ contract UpwardAuction is
         uint _id,
         uint _amount,
         uint _startPrice,
-        uint _expired
-    )virtual external nonReentrant nonReentrant {
+        uint _expired,
+        uint _tolleratedDiscount
+    ) external virtual nonReentrant {
         require(_amount > 0, "Set correct bond's amount");
         require(_startPrice > 0, "Set correct start price");
         require(
             _expired > (block.timestamp + minPeriodAuction),
             "Set correct expired period"
         );
-        _newAcutionBond(msg.sender, _id, _amount, _startPrice, _expired);
+        _newAcutionBond(
+            msg.sender,
+            _id,
+            _amount,
+            _startPrice,
+            _expired,
+            _tolleratedDiscount
+        ); // todo _tolleratedDiscount
     }
     function instalmentPot(
         uint _index,
         uint _amount
-    )virtual external nonReentrant outIndex(_index) {
+    ) external virtual nonReentrant outIndex(_index) {
         _instalmentPot(msg.sender, _index, _amount);
         emit newInstalmentPot(msg.sender, _index, _amount);
     }
-    function closeAuction(uint _index)virtual external nonReentrant outIndex(_index) {
+    function closeAuction(
+        uint _index
+    ) external virtual nonReentrant outIndex(_index) {
         _closeAuction(msg.sender, _index);
         emit CloseAuction(_index, block.timestamp);
     }
-    function withDrawBond(uint _index)virtual external nonReentrant outIndex(_index) {
+    function withDrawBond(
+        uint _index
+    ) external virtual nonReentrant outIndex(_index) {
         _withDrawBond(msg.sender, _index);
     }
-    function withdrawMoney(uint _amount)virtual external nonReentrant {
+    function withdrawMoney(uint _amount) external virtual nonReentrant {
         _withdrawMoney(msg.sender, _amount);
         emit WithDrawMoney(msg.sender, _amount);
     }
@@ -141,17 +156,25 @@ contract UpwardAuction is
         uint _id,
         uint _amount,
         uint _startPrice,
-        uint _expired
-    ) virtual internal {
+        uint _expired,
+        uint _tolleratedDiscount
+    ) internal virtual {
         _depositBond(_user, address(this), _id, _amount);
-        _setAuctionData(_user, _id, _amount, _startPrice, _expired);
+        _setAuctionData(
+            _user,
+            _id,
+            _amount,
+            _startPrice,
+            _expired,
+            _tolleratedDiscount
+        ); //todo _tolleratedDiscount
     }
     function _depositBond(
         address _user,
         address _to,
         uint _id,
         uint _amount
-    )virtual internal {
+    ) internal virtual {
         IERC1155(bondContract).safeTransferFrom(_user, _to, _id, _amount, "");
     }
     function _setAuctionData(
@@ -159,8 +182,10 @@ contract UpwardAuction is
         uint _id,
         uint _amount,
         uint _startPrice,
-        uint _expired
-    )virtual internal {
+        uint _expired,
+        uint _tolleratedDiscount //todo
+    ) internal virtual {
+        uint[] memory _penality;
         Auction memory _auction = Auction(
             _owner,
             _id,
@@ -169,25 +194,45 @@ contract UpwardAuction is
             _expired,
             0,
             _owner,
-            true
+            true,
+            _tolleratedDiscount, // todo
+            _penality //todo
         );
         auctions.push(_auction);
         emit NewAuction(_owner, _id, _amount);
+    }
+    // todo aggiunta per controlli
+    function _checkPot(
+        uint _pot,
+        uint _amount,
+        uint _tolleratedDiscount
+    ) internal pure returns (bool) {
+        require(
+            _pot > _amount, //todo inveritito il "<" ora l'offerta al netto delle fees deve essere più piccola
+            "This pot is higher than the current pot."
+        );
+        require(
+            _amount >= _pot - calculateBasisPoints(_pot, _tolleratedDiscount),
+            "This pot is lower then tolerated Discount "
+        );
+        return true;
     }
     // funzioni per puntare
     function _instalmentPot(
         address _player,
         uint _index,
         uint _amount
-    )virtual internal {
+    ) internal virtual {
         require(
             auctions[_index].expired > block.timestamp,
             "This auction is expired"
         );
         require(auctions[_index].open == true, "This auction is close");
-        require(
-            auctions[_index].pot < _calcPotFee(_amount), //? Esiste una soluzione migliore?!
-            "This pot is low then already pot"
+        // todo la funzione garantisce i controlli sull'offerta più bassa e sulla tolleranza allo sconto
+        _checkPot(
+            auctions[_index].pot,
+            _calcPotFee(_amount),
+            auctions[_index].tolleratedDiscount
         );
         require(auctions[_index].owner != _player, "Owner can't pot");
         coolDownControl(_player, _index);
@@ -202,7 +247,7 @@ contract UpwardAuction is
         auctions[_index].player = _player;
         auctions[_index].pot = amountLessFee;
     }
-    function  _calcPotFee(uint _amount)virtual internal view returns (uint) {
+    function _calcPotFee(uint _amount) internal view virtual returns (uint) {
         if (_amount < feeSystem.priceThreshold) {
             return _amount - feeSystem.fixedFee;
         } else {
@@ -210,7 +255,7 @@ contract UpwardAuction is
                 _amount - calculateBasisPoints(_amount, feeSystem.dinamicFee);
         }
     }
-    function _paidPotFee(uint _amount) virtual internal returns (uint) {
+    function _paidPotFee(uint _amount) internal virtual returns (uint) {
         if (_amount < feeSystem.priceThreshold) {
             contractBalance += feeSystem.fixedFee;
             emit PaidFee(_amount);
@@ -228,29 +273,108 @@ contract UpwardAuction is
     function calculateBasisPoints(
         uint256 amount,
         uint256 bps
-    ) virtual internal pure returns (uint) {
+    ) internal pure virtual returns (uint) {
         return (amount * bps) / 10000; // 10000 bps = 100%
     }
-    function _depositErc20(address _from, address _to, uint _amount) virtual internal {
+    function _depositErc20(
+        address _from,
+        address _to,
+        uint _amount
+    ) internal virtual {
         SafeERC20.safeTransferFrom(IERC20(money), _from, _to, _amount);
     }
+
+    // todo Aggiungo la funzione per cambiare la forchetta di sconto
+
+    event ChangeTolleratedDiscount(uint indexed _index, uint _newDiscount);
+
+    function changeTolleratedDiscount(
+        uint _index,
+        uint _newDiscount
+    ) external nonReentrant outIndex(_index) whenNotPaused {}
+    function _changeTolleratedDiscount(
+        address _owner,
+        uint _index,
+        uint _newDiscount
+    ) internal {
+        require(_owner == auctions[_index].owner, "Not Owner");
+        require(
+            auctions[_index].expired < block.timestamp,
+            "This auction is not expired"
+        );
+        require(auctions[_index].open == true, "This auction already close");
+        require(
+            auctions[_index].tolleratedDiscount < _newDiscount,
+            "Dew Discount must be more  great then older Discount"
+        );
+        if (auctions[_index].expired - block.timestamp >= 1 days) {
+            //!Scadenza superiore ad 1 giorno 5%
+            auctions[_index].penality.push(500);
+        } else if (
+            auctions[_index].expired - block.timestamp < 1 days &&
+            auctions[_index].expired - block.timestamp >= 1 hours
+        ) {
+            //!Scadenza tra 24h e 23h 8%
+            auctions[_index].penality.push(800);
+        } else {
+            //! scadenza sotto 1h 10%
+            auctions[_index].penality.push(1000);
+        }
+        auctions[_index].tolleratedDiscount = _newDiscount;
+        emit ChangeTolleratedDiscount(_index, _newDiscount);
+    }
+
+    // todo Chiusura d'emergenza
+    function _emergencyCloseAuction(address _owner, uint _index) internal {
+        require(
+            auctions[_index].expired > block.timestamp,
+            "This auction is not expired"
+        );
+        require(_owner == auctions[_index].owner, "Not Owner");
+        require(auctions[_index].open == true, "This auction already close");
+
+        auctions[_index].open = false;
+        if (auctions[_index].expired - block.timestamp >= 1 days) {
+            //!Scadenza superiore ad 12h giorno 15%
+            auctions[_index].penality.push(1500);
+        } else {
+            //!Scadenza minore 12h 20%
+            auctions[_index].penality.push(2000);
+        }
+        _closeAuctionOperation(_index);
+    }
+
     // funzione per chiudere l'auction alla fine del processo
-    function _closeAuction(address _owner, uint _index) virtual internal {
+    // todo divisa la funzione
+    function _closeAuction(address _owner, uint _index) internal virtual {
         require(
             auctions[_index].expired < block.timestamp,
             "This auction is not expired"
         );
         require(
             _owner == auctions[_index].owner ||
-                _owner == auctions[_index].player||_owner ==owner(),//? per ora lascio la possibilità al owner di forzare la chiusura di un asta per incassare le fees
+                _owner == auctions[_index].player ||
+                _owner == owner(), //? per ora lascio la possibilità al owner di forzare la chiusura di un asta per incassare le fees
             "Not Owner"
         );
         require(auctions[_index].open == true, "This auction already close");
         auctions[_index].open = false;
+        _closeAuctionOperation(_index);
+    }
 
+    // todo divisa la funzione di close per riutilizzare parte di codice
+    function _closeAuctionOperation(uint _index) internal {
         address newOwner = auctions[_index].player;
         address oldOwner = auctions[_index].owner;
-        uint pot = _paidSellFee(auctions[_index].pot);
+
+        //! logica calcolo penalità
+        uint pot = auctions[_index].pot;
+        for (uint i = 0; i < auctions[_index].penality.length; i++) {
+            pot = _paidPenalityFees(pot, auctions[_index].penality[i]);
+        }
+        //! ---------------
+
+        pot = _paidSellFee(pot);
 
         auctions[_index].pot = 0;
         auctions[_index].owner = newOwner;
@@ -260,7 +384,17 @@ contract UpwardAuction is
 
         balanceUser[oldOwner] += pot;
     }
-    function _paidSellFee(uint _amount) virtual internal returns (uint) {
+
+    function _paidPenalityFees(
+        uint _amount,
+        uint _penality
+    ) internal returns (uint) {
+        uint fee = calculateBasisPoints(_amount, _penality);
+        contractBalance += fee;
+        return _amount - fee;
+    }
+
+    function _paidSellFee(uint _amount) internal virtual returns (uint) {
         for (uint i; i < feeSeller.echelons.length; i++) {
             if (_amount < feeSeller.echelons[i]) {
                 uint fee = calculateBasisPoints(_amount, feeSeller.fees[i]);
@@ -277,7 +411,7 @@ contract UpwardAuction is
         emit PaidFee(_fee);
         return _amount - _fee;
     }
-    function _withDrawBond(address _owner, uint _index) virtual internal {
+    function _withDrawBond(address _owner, uint _index) internal virtual {
         require(_owner == auctions[_index].owner, "Not Owner");
         require(
             auctions[_index].expired < block.timestamp,
@@ -300,7 +434,7 @@ contract UpwardAuction is
         );
     }
     // funzione per prelevare i Money
-    function _withdrawMoney(address _user, uint _amount) virtual internal {
+    function _withdrawMoney(address _user, uint _amount) internal virtual {
         require(
             _amount <= balanceUser[_user] - lockBalance[_user],
             "Free balance is low for this operation"
@@ -313,27 +447,27 @@ contract UpwardAuction is
         SafeERC20.safeTransfer(IERC20(money), _user, _amount);
     }
     //Freez system
-    function setCoolDown(uint _coolDown) virtual external onlyOwner {
+    function setCoolDown(uint _coolDown) external virtual onlyOwner {
         coolDown = _coolDown;
     }
-    function coolDownControl(address _user, uint _id) virtual internal {
+    function coolDownControl(address _user, uint _id) internal virtual {
         require(
             lastPotTime[_user][_id] + coolDown < block.timestamp,
             "Wait for pot again"
         );
         lastPotTime[_user][_id] = block.timestamp;
     }
-    function showFeesSystem() virtual public view returns (FeeSystem memory) {
+    function showFeesSystem() public view virtual returns (FeeSystem memory) {
         return feeSystem;
     }
-    function showFeesSeller() virtual public view returns (FeeSeller memory) {
+    function showFeesSeller() public view virtual returns (FeeSeller memory) {
         return feeSeller;
     }
     // ? Non so se la lascero ma per ora mi serve in fase di testing
-    function showBalanceFee() virtual external view returns (uint) {
+    function showBalanceFee() external view virtual returns (uint) {
         return contractBalance;
     }
-    function withdrawFees() virtual external onlyOwner {
+    function withdrawFees() external virtual onlyOwner {
         uint amount = contractBalance;
         contractBalance = 0;
         SafeERC20.safeTransfer(IERC20(money), owner(), amount);

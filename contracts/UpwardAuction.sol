@@ -108,7 +108,7 @@ contract UpwardAuction is
         uint _amount,
         uint _startPrice,
         uint _expired
-    )virtual external nonReentrant nonReentrant {
+    )virtual external nonReentrant {
         require(_amount > 0, "Set correct bond's amount");
         require(_startPrice > 0, "Set correct start price");
         require(

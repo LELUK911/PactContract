@@ -192,7 +192,7 @@ contract DownwardAuction is
             _amount,
             _startPrice,
             _expired,
-            0,
+            0,// ! qui va verificato se il controllo regge dopo
             _owner,
             true,
             _tolleratedDiscount, // todo
@@ -203,10 +203,12 @@ contract DownwardAuction is
     }
     // todo aggiunta per controlli
     function _checkPot(
+        uint _index,
         uint _pot,
         uint _amount,
         uint _tolleratedDiscount
-    ) internal pure returns (bool) {
+    ) internal view  {
+    if(_pot >0){
         require(
             _pot > _amount, //todo inveritito il "<" ora l'offerta al netto delle fees deve essere più piccola
             "This pot is higher than the current pot."
@@ -215,7 +217,18 @@ contract DownwardAuction is
             _amount >= _pot - calculateBasisPoints(_pot, _tolleratedDiscount),
             "This pot is lower then tolerated Discount "
         );
-        return true;
+    }else{
+        require(
+            auctions[_index].startPrice > _amount, //todo inveritito il "<" ora l'offerta al netto delle fees deve essere più piccola
+            "This pot is higher than the current pot."
+        );
+        require(
+            _amount >= auctions[_index].startPrice - calculateBasisPoints(auctions[_index].startPrice, _tolleratedDiscount),
+            "This pot is lower then tolerated Discount "
+        );
+        
+    }
+    
     }
     // funzioni per puntare
     function _instalmentPot(
@@ -230,6 +243,7 @@ contract DownwardAuction is
         require(auctions[_index].open == true, "This auction is close");
         // todo la funzione garantisce i controlli sull'offerta più bassa e sulla tolleranza allo sconto
         _checkPot(
+            _index,
             auctions[_index].pot,
             _calcPotFee(_amount),
             auctions[_index].tolleratedDiscount
@@ -286,12 +300,16 @@ contract DownwardAuction is
 
     // todo Aggiungo la funzione per cambiare la forchetta di sconto
 
+    function showAuctionPenalityes(uint _index) external view returns(uint[] memory){
+        return  auctions[_index].penality;
+    }
     event ChangeTolleratedDiscount(uint indexed _index, uint _newDiscount);
-
     function changeTolleratedDiscount(
         uint _index,
         uint _newDiscount
-    ) external nonReentrant outIndex(_index) whenNotPaused {}
+    ) external nonReentrant outIndex(_index) whenNotPaused {
+        _changeTolleratedDiscount(msg.sender, _index, _newDiscount);
+    }
     function _changeTolleratedDiscount(
         address _owner,
         uint _index,
@@ -299,7 +317,7 @@ contract DownwardAuction is
     ) internal {
         require(_owner == auctions[_index].owner, "Not Owner");
         require(
-            auctions[_index].expired < block.timestamp,
+            auctions[_index].expired > block.timestamp,
             "This auction is not expired"
         );
         require(auctions[_index].open == true, "This auction already close");

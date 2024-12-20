@@ -343,10 +343,15 @@ contract DownwardAuction is
     }
 
     // todo Chiusura d'emergenza
+    function emergencyCloseAuction(uint _index) external nonReentrant outIndex(_index) whenNotPaused{
+        _emergencyCloseAuction(msg.sender, _index);
+    }
+
+    event EmergencyCloseAuction(address indexed _owner,uint _index);
     function _emergencyCloseAuction(address _owner, uint _index) internal {
         require(
             auctions[_index].expired > block.timestamp,
-            "This auction is not expired"
+            "This auction is expired"
         );
         require(_owner == auctions[_index].owner, "Not Owner");
         require(auctions[_index].open == true, "This auction already close");
@@ -360,6 +365,7 @@ contract DownwardAuction is
             auctions[_index].penality.push(2000);
         }
         _closeAuctionOperation(_index);
+        emit EmergencyCloseAuction(msg.sender, _index);
     }
 
     // funzione per chiudere l'auction alla fine del processo
@@ -431,10 +437,11 @@ contract DownwardAuction is
     }
     function _withDrawBond(address _owner, uint _index) internal virtual {
         require(_owner == auctions[_index].owner, "Not Owner");
-        require(
-            auctions[_index].expired < block.timestamp,
-            "This auction is not expired"
-        ); // penso sia da correggere
+        //!rimosso perche se chiudo d'emergenza è normale che non è scaduto
+        //require(
+        //    auctions[_index].expired < block.timestamp,
+        //    "This auction is not expired"
+        //); // penso sia da correggere
         require(auctions[_index].open == false, "This auction is Open");
 
         uint amountBond = auctions[_index].amount;

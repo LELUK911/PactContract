@@ -14,8 +14,6 @@ import "./interface/Ibond.sol";
 
 import {console} from "hardhat/console.sol";
 
-
-//! AGGIUNGERE IL REQUIRE PER LE PAUSE
 contract UpwardAuction is
     ERC165,
     Pausable,

@@ -96,6 +96,18 @@ contract UpwardAuction is
     event FeesWithdrawn(address indexed owner, uint amount, uint timestamp);
 
     /**
+     * @dev Event emitted when the bond contract address is updated.
+     * @param previousAddress The previous address of the bond contract.
+     * @param newAddress The new address of the bond contract.
+     * @notice This event provides transparency regarding changes to the bond contract address,
+     *         allowing external systems or users to track updates for security and auditing purposes.
+     */
+    event BondAddressUpdated(
+        address indexed previousAddress,
+        address indexed newAddress
+    );
+
+    /**
      * @dev Modifier to ensure the provided index is within the bounds of the auctions array.
      *      Reverts if the index is out of bounds.
      * @param _index The index of the auction to validate.
@@ -138,6 +150,32 @@ contract UpwardAuction is
         feeSystem.fixedFee = _fixedFee;
         feeSystem.priceThreshold = _priceThreshold;
         feeSystem.dinamicFee = _dinamicFee;
+    }
+
+    /**
+     * @dev Updates the address of the ERC1155 bond contract.
+     * @param _bondContrac The new address of the bond contract.
+     * @notice Only the owner of the contract can execute this function.
+     *         The function ensures that the provided address is valid (non-zero) and emits an event
+     *         to notify that the bond contract address has been updated.
+     * Require The new bond contract address must not be the zero address.
+     * Require The new bond contract address must be different from the current one.
+     * @notice This function is protected by `nonReentrant` to prevent reentrancy attacks,
+     *         even though it does not handle funds. This is an additional layer of security.
+     */
+    function setNewBondAddress(
+        address _bondContrac
+    ) external onlyOwner nonReentrant {
+        require(_bondContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
+        require(
+            _bondContrac != bondContract,
+            "Address already set to this value"
+        ); // Ensures the new address is not the same as the current one.
+
+        address previousAddress = bondContract; // Stores the current address before updating.
+        bondContract = _bondContrac; // Updates the bond contract address.
+
+        emit BondAddressUpdated(previousAddress, _bondContrac); // Emits an event to log the update.
     }
 
     /**
@@ -430,6 +468,7 @@ contract UpwardAuction is
         _depositErc20(_player, address(this), _amount); // Deposit bid amount
         uint amountLessFee = _paidPotFee(_amount); // Calculate amount after fees
 
+        balanceUser[_player] += amountLessFee;
         // Lock the current player's funds
         _updateLockBalance(_player, amountLessFee, true);
 
@@ -543,8 +582,9 @@ contract UpwardAuction is
         auctions[_index].owner = newOwner; // Update the owner to the highest bidder
 
         balanceUser[newOwner] -= pot; // Deduct the pot amount from the new owner's balance
-        lockBalance[newOwner] -= pot; // Update the lock balance
 
+        //lockBalance[newOwner] -= pot;
+        _updateLockBalance(newOwner, pot, false); // Update the lock balance
         balanceUser[oldOwner] += pot; // Add the pot amount to the old owner's balance
     }
 

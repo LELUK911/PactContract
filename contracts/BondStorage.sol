@@ -62,6 +62,8 @@ address internal WHET;
 uint internal MAX_COUPONS;
 address internal treasury;
 uint internal bondId;
+uint internal COUPON_FEE = 5;
+uint[4] internal LIQUIDATION_FEE = [5,15,30,50];
 
 /**
  * @dev Maps each address to its ConditionOfFee struct, defining penalties and score.

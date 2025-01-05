@@ -1051,4 +1051,15 @@ contract DownwardAuction is
                 _amount - calculateBasisPoints(_amount, feeSystem.dinamicFee);
         }
     }
+
+
+    /**
+     * @dev Returns the address of the bond contract.
+     * @return The address of the bond contract currently set in the system.
+     * @notice This function provides visibility into the bond contract address
+     *         for external users or systems interacting with the contract.
+     */
+    function showBondContractAddress() public view returns (address) {
+        return bondContract;
+    }
 }

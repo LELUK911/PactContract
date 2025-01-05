@@ -3,49 +3,53 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-// Import the interface for ERC20 tokens, used for interacting with token contracts (e.g., transfers, approvals).
+// Import the interface for ERC20 tokens, enabling interaction with token contracts for operations
+// like transfers, balance checks, and approvals.
 
 import {IERC1155} from "@openzeppelin/contracts/interfaces/IERC1155.sol";
-// Import the interface for ERC1155 tokens, used for interacting with multi-token contracts.
+// Import the interface for ERC1155 tokens, allowing interaction with contracts that follow the
+// ERC1155 multi-token standard, including transfers and balance queries.
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-// Import the SafeERC20 library, which provides safe wrappers for ERC20 operations to handle potential failures.
-
-import {Address} from "@openzeppelin/contracts/utils/Address.sol";
-// Import the Address utility library, which contains helper functions for address type operations.
+// Import the SafeERC20 library, which wraps ERC20 operations to ensure safety by handling
+// potential issues like failed transfers and reentrancy attacks.
 
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-// Import the IERC1155Receiver interface, which must be implemented by contracts receiving ERC1155 tokens.
+// Import the IERC1155Receiver interface, which specifies the required functions for contracts
+// that want to receive and manage ERC1155 tokens securely.
 
 import {BondLaunchStorage} from "./BondLaunchStorage.sol";
-// Import the BondLaunchStorage contract, which contains the storage structure and variables for the BondLaunch system.
-
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-// Import the PausableUpgradeable contract, used to implement a pausability feature for the contract.
-
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-// Import the ReentrancyGuardUpgradeable contract, used to prevent reentrancy attacks.
-
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-// Import the Initializable contract, used for initializing upgradeable contracts without constructors.
-
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-// Import the OwnableUpgradeable contract, used to manage ownership and permissions in the upgradeable contract.
+// Import the BondLaunchStorage contract, which defines the storage structure and essential
+// variables for managing the bond launch system in the application.
 
 import "./interface/Ibond.sol";
-// Import the IBond interface, which defines the functions required for interacting with the bond contract.
+// Import the IBond interface, defining the standard methods for interacting with the bond
+// contract, ensuring seamless integration with bond-specific logic.
+
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+// Import the Pausable contract, which provides the functionality to temporarily halt contract
+// operations for maintenance or emergency purposes.
+
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+// Import the ReentrancyGuard contract to prevent reentrancy attacks by ensuring that functions
+// cannot be called again while already executing.
+
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+// Import the Ownable contract to enable ownership management, allowing privileged operations
+// to be restricted to the contract owner.
+
+//import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+//import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+//import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+//import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {console} from "hardhat/console.sol";
-//import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-//import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-//import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract BondLaunch is
     BondLaunchStorage, // Inherits the storage structure and variables for the BondLaunch system.
-    Initializable, // Enables the contract to be upgradeable by replacing constructors with initialization functions.
-    PausableUpgradeable, // Allows the contract to be paused and unpaused by the owner.
-    ReentrancyGuardUpgradeable, // Prevents reentrancy attacks in critical functions.
-    OwnableUpgradeable // Provides ownership control functionality for the contract.
+    Pausable, // Allows the contract to be paused and unpaused by the owner.
+    ReentrancyGuard, // Prevents reentrancy attacks in critical functions.
+    Ownable // Provides ownership control functionality for the contract.
 {
     /**
      * @dev Emitted when a new bond is launched for sale.
@@ -97,22 +101,20 @@ contract BondLaunch is
      */
     event DeleteLaunch(address indexed _user, uint indexed _id);
 
-    /*
     constructor(address _bondContract) Ownable(msg.sender) {
         bondContract = _bondContract;
     }
-*/
 
-    //?PROXY CONSTRUCTOR
+    /*
     /**
      * @dev Proxy initializer function to replace the constructor.
      *      This function is used for initializing the contract when deployed as an upgradeable proxy.
      * @param _owner Address of the owner to set for the contract.
-     */
+     
     function initialize(address _owner) public initializer {
         __Ownable_init(); // Initializes the OwnableUpgradeable contract to handle ownership.
         transferOwnership(_owner); // Transfers ownership to the specified owner address.
-    }
+    }*/
 
     /**
      * @dev Sets the address of the bond contract.
@@ -493,5 +495,15 @@ contract BondLaunch is
         uint _id
     ) external view returns (uint amount) {
         amount = bondBuyForUser[_user][_id]; // Retrieve the user's bond withdrawal balance.
+    }
+
+    /**
+     * @dev Returns the address of the bond contract.
+     * @return The address of the bond contract currently set in the system.
+     * @notice This function provides visibility into the bond contract address
+     *         for external users or systems interacting with the contract.
+     */
+    function showBondContractAddress() public view returns (address) {
+        return bondContract;
     }
 }

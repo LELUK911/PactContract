@@ -12,24 +12,24 @@ pragma solidity ^0.8.24;
  * - Ownable: defines an 'owner' role with special privileges (e.g., pause/unpause, fee updates).
  * - TimeManagement: custom library for date and time operations (e.g., coupon maturities).
  */
-//import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
-import {ERC1155Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol';
+import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-//import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-//import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-//import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TimeManagment} from "./library/TimeManagement.sol";
 import {BondStorage} from './BondStorage.sol';
 
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+//import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+//import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+//import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+//import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+//import {ERC1155Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol';
 
 import {console} from "hardhat/console.sol";
 
-contract BondContract is BondStorage,Initializable,ERC1155Upgradeable, PausableUpgradeable, ReentrancyGuardUpgradeable ,OwnableUpgradeable{
+contract BondContract is BondStorage,ERC1155, Pausable, ReentrancyGuard,Ownable{
 
 
 /**
@@ -180,22 +180,22 @@ modifier _onlyIssuer(uint _id) {
  * - Initializes the ERC1155 base URI as an empty string (can be overridden later).
  * - Sets the initial bond counter (`bondId`) to 0.
  */
-/*
+
 constructor(address _owner) Ownable(_owner) ERC1155("") {
     bondId = 0;
-}
-*/
+    MAX_COUPONS = 6;
 
-//?PROXY CONSTRUCTOR
-// Funzione di inizializzazione invece del costruttore
+}
+
+/*
+
 function initialize(address _owner) public initializer {
         __Ownable_init();
         transferOwnership(_owner);
         bondId = 0;
-        MAX_COUPONS = 6; // Valore di esempio
+        MAX_COUPONS = 6; 
     }
-
-//? ONLY OWNER EXTERNAL FUNCTION
+*/
 
 /**
  * @dev Allows the contract owner to pause the contract (via OpenZeppelin's Pausable).
@@ -256,6 +256,18 @@ function setWETHaddress(address _address) external onlyOwner {
 }
 
 /**
+ * @dev Sets the coupon fee used in the system.
+ *      This function can only be called by the owner of the contract.
+ * @param _fee The new coupon fee to be set. Must be greater than zero.
+ * @notice Ensures that the fee is set to a valid value to prevent incorrect configurations.
+ */
+function setCOUPON_FEE(uint _fee) external onlyOwner {
+    require(_fee > 0, "Set a valid fee");
+    COUPON_FEE = _fee;
+}
+
+
+/**
  * @dev Sets the address of the treasury.
  *      Must not be the zero address.
  * @param _address The treasury contract address.
@@ -263,6 +275,30 @@ function setWETHaddress(address _address) external onlyOwner {
 function setTreasuryAddress(address _address) external onlyOwner {
     require(_address != address(0), "set correct Address");
     treasury = _address;
+}
+
+
+/**
+ * @dev Updates a specific element in the LIQUIDATION_FEE array.
+ * @param _index The index of the element to update (0-3).
+ * @param _value The new value to set at the specified index.
+ * @notice This function can only be called by the owner of the contract.
+ * @notice Reverts if the index is out of bounds or the value is invalid.
+ */
+function updateLiquidationFee(uint _index, uint _value) external onlyOwner {
+    require(_index < LIQUIDATION_FEE.length, "Invalid index");
+    require(_value > 0, "Value must be greater than 0");
+    LIQUIDATION_FEE[_index] = _value;
+}
+
+/**
+ * @dev Updates the entire LIQUIDATION_FEE array.
+ * @param _newFees The new array of liquidation fees to set.
+ * @notice This function can only be called by the owner of the contract.
+ * @notice The provided array must have exactly 4 elements.
+ */
+function updateLiquidationFees(uint[4] memory _newFees) external onlyOwner {
+    LIQUIDATION_FEE = _newFees;
 }
 
 
@@ -328,7 +364,7 @@ function safeTransferFrom(
     }
 
     // Charge a transfer fee if both from/to are outside the ecosystem
-    if (!ecosistemAddress[from] && !ecosistemAddress[to]) {
+    if (!ecosistemAddress[from] && !ecosistemAddress[to] && to != launcherContract && from != launcherContract) {
         SafeERC20.safeTransferFrom(
             IERC20(WHET),
             from,
@@ -775,7 +811,6 @@ function _depositTokenForInterest(
     emit InterestDeposited(_issuer, _id, _amount);
 }
 
-//! BUG MORTALE!!!! SE IO NON RIESCO A PAGARE UNA CEDOLA E QUALCUNO LIQUIDA LA STESSA CEDOLA L'EMITTENTE SI BECCA LA SECONDA LIQUIDAZIONE COME TASSO
 /**
  * @dev Handles the claim of a coupon (interest payment) by a user for a specific coupon index.
  *      1) Calculates how many coupons (`moltiplicator`) the user can claim, and sets it to 0 (so it can't be reused).
@@ -1147,7 +1182,6 @@ function _totaLiquidationForBondExpired(
 {
     // Calculate total tokens to transfer based on the amount of bond tokens redeemed
     uint valueTokenTransfer = bond[_id].sizeLoan * _amount;
-
     // Reduce the bond’s repay balance by the total repayment amount
     bond[_id].balancLoanRepay -= bond[_id].sizeLoan * _amount;
 
@@ -1157,7 +1191,7 @@ function _totaLiquidationForBondExpired(
 
     // Transfer the repayment tokens (minus liquidation fee) to the user
     SafeERC20.safeTransfer(
-        (IERC20(bond[_id].tokenCollateral)),
+        (IERC20(bond[_id].tokenLoan)),
         _user,
         valueTokenTransfer -
             _liquidationFee(
@@ -1166,7 +1200,6 @@ function _totaLiquidationForBondExpired(
                 valueTokenTransfer
             )
     );
-
     // Emit event for successful loan claim
     emit LoanClaimed(_user, _id, _amount);
 }
@@ -1208,32 +1241,6 @@ function _withdrawCollateral(uint _id, address _issuer) internal {
 
     emit CollateralWithdrawn(_issuer, _id, amountCollateral);
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 /**
  * @dev Assigns initial “prize points” (score-based rewards) to the bond issuer
@@ -1314,8 +1321,8 @@ function _setScoreForUser(address _user) internal {
             conditionOfFee[_user].score >= 700000)
     ) {
         uint[3] memory penalties = [uint(100), uint(200), uint(400)];
-        conditionOfFee[_user] = ConditionOfFee(penalties, 700000);
-        emit ScoreUpdated(_user, 700000);
+        conditionOfFee[_user] = ConditionOfFee(penalties, 700100);
+        emit ScoreUpdated(_user, 700100);
     }
 
     // Case 2: high score (>1M)
@@ -1602,7 +1609,7 @@ function _updateBalanceContractForEmissionNewBond(
 {
     // Calculate the fee portion of the collateral
     uint feeAmount = (_amountCollateral * _fee) / 1000;
-
+ 
     // Add it to the contract's fee balance
     balanceContractFeesForToken[_tokenAddress] += feeAmount;
 
@@ -1619,15 +1626,16 @@ function _updateBalanceContractForEmissionNewBond(
  *
  * Fee tiers (in millesimal):
  *  - score > 1,000,000 => 0.5% (5 per 1000)
- *  - 700,000 < score <= 1,000,000 => 1.5% (15 per 1000) [*Note: there's a '1' used in code, presumably 0.1% or 1%?]
- *  - 500,000 < score <= 700,000 => 3% (30 per 1000) [*Code uses '2' => 0.2% or 2%? Possibly needs review]
- *  - score <= 500,000 => 5% (50 per 1000) [*Code uses '4' => 0.4% or 4%? Possibly needs review]
+ *  - 700,000 < score <= 1,000,000 => 1.5% (15 per 1000)
+ *  - 500,000 < score <= 700,000 => 3% (30 per 1000)
+ *  - score <= 500,000 => 5% (50 per 1000)
  *
  * @param _iusser          The issuer’s address whose score determines the fee tier.
  * @param _tokenAddress    The ERC20 token used for collateral.
  * @param _amountCollateral The portion of collateral on which the fee is charged.
  * @return The actual fee amount deducted and added to the contract’s fee balance.
  */
+
 function _liquidationFee(
     address _iusser,
     address _tokenAddress,
@@ -1638,7 +1646,7 @@ function _liquidationFee(
         return _updateBalanceContractForEmissionNewBond(
             _tokenAddress,
             _amountCollateral,
-            5
+            LIQUIDATION_FEE[0]
         ); 
     }
     // Medium-high score => 1.5%
@@ -1649,7 +1657,7 @@ function _liquidationFee(
         return _updateBalanceContractForEmissionNewBond(
             _tokenAddress,
             _amountCollateral,
-            15
+            LIQUIDATION_FEE[1]      
         ); 
     }
     // Medium-low score => 3%
@@ -1660,7 +1668,8 @@ function _liquidationFee(
         return _updateBalanceContractForEmissionNewBond(
             _tokenAddress,
             _amountCollateral,
-            30
+            LIQUIDATION_FEE[2]
+
         ); 
     }
     // Low score => 5%
@@ -1668,7 +1677,7 @@ function _liquidationFee(
         return _updateBalanceContractForEmissionNewBond(
             _tokenAddress,
             _amountCollateral,
-            5
+            LIQUIDATION_FEE[3] 
         ); 
     }
     return 0;
@@ -1687,7 +1696,7 @@ function _couponFee(
     uint _amount
 ) internal returns (uint) {
     // A fixed 0.5% fee on each coupon
-    return _upDateBalanceUserFees(_tokenAddress, _amount, 5);
+    return _upDateBalanceUserFees(_tokenAddress, _amount, COUPON_FEE);
 }
 
 /**
@@ -1843,5 +1852,24 @@ function _checkStatusPoints(
 ) internal view returns (ConditionOfFee storage) {
     return conditionOfFee[_iusser];
 }
+
+/**
+ * @dev Returns the current value of the coupon fee.
+ * @return The coupon fee set in the contract.
+ * @notice This function provides visibility into the current coupon fee configuration.
+ */
+function showCouponFee() external view returns (uint) {
+    return COUPON_FEE;
+}
+
+/**
+ * @dev Returns the current LIQUIDATION_FEE array.
+ * @return An array containing the current liquidation fees.
+ * @notice This function provides visibility into the current liquidation fee structure.
+ */
+function showLiquidationFees() external view returns (uint[4] memory) {
+    return LIQUIDATION_FEE;
+}
+
 
 }

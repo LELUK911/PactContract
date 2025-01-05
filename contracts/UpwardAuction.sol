@@ -3,37 +3,61 @@
 pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+// Provides the interface for ERC20 tokens, enabling the contract to interact with standard ERC20 token functions
+// such as `transfer`, `approve`, `transferFrom`, and querying balances.
+
 import {IERC1155} from "@openzeppelin/contracts/interfaces/IERC1155.sol";
+// Provides the interface for ERC1155 tokens, allowing the contract to interact with multi-token standards.
+// This is useful for operations like transferring multiple types of tokens in a single transaction.
+
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-//import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-//import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-//import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-// Import the PausableUpgradeable contract, used to implement a pausability feature for the contract.
+// A library that ensures safe interaction with ERC20 tokens, protecting against reentrancy attacks and unexpected
+// token behavior by wrapping `transfer` and `transferFrom` calls with additional checks.
 
-import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-// Import the ReentrancyGuardUpgradeable contract, used to prevent reentrancy attacks.
+import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
+// Adds the ability to pause and unpause the contract by the owner or an authorized entity.
+// This is useful for temporarily disabling certain functions in case of an emergency or for maintenance purposes.
 
-import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-// Import the Initializable contract, used for initializing upgradeable contracts without constructors.
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+// Provides protection against reentrancy attacks by ensuring that a function cannot be re-entered
+// while it is already executing. This is critical for securing contract logic that handles external calls.
 
-import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-// Import the OwnableUpgradeable contract, used to manage ownership and permissions in the upgradeable contract.
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+// Implements basic ownership functionality, allowing only the contract owner to execute specific functions.
+// Useful for managing privileged actions such as updating configurations or withdrawing fees.
 
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+// Defines the interface for contracts that are intended to handle the receipt of ERC1155 tokens.
+// This is essential for contracts that need to safely receive or manage ERC1155 token transfers.
+
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
+// Implements the ERC165 standard for interface detection. This allows the contract to declare which
+// interfaces it supports, enabling other contracts and systems to query this information.
+
 import "./interface/Ibond.sol";
+// Custom interface specific to the project's bond functionality, providing a standardized way
+// for the contract to interact with bond-related operations or logic unique to this system.
+
 
 import {UpwardAuctionStorage} from "./UpwardAuctionStorage.sol";
+// Storage contract that contains the state variables and mappings required for the DownwardAuction system.
+
+
+
+
+//import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+//import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
+//import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+//import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
+
 
 import {console} from "hardhat/console.sol";
 
 contract UpwardAuction is
     UpwardAuctionStorage,
-    Initializable, // Enables the contract to be upgradeable by replacing constructors with initialization functions.
-    PausableUpgradeable, // Allows the contract to be paused and unpaused by the owner.
-    ReentrancyGuardUpgradeable, // Prevents reentrancy attacks in critical functions.
-    OwnableUpgradeable
+    Pausable, // Allows the contract to be paused and unpaused by the owner.
+    ReentrancyGuard, // Prevents reentrancy attacks in critical functions.
+    Ownable
 {
     /**
      * @dev Emitted when a new auction is created.
@@ -117,7 +141,7 @@ contract UpwardAuction is
         _;
     }
 
-    /*
+    
     constructor(
         address _bondContrac,
         address _money,
@@ -132,7 +156,9 @@ contract UpwardAuction is
         feeSystem.priceThreshold = _priceThreshold;
         feeSystem.dinamicFee = _dinamicFee;
     }
-*/
+
+
+/*
 
     function initialize(
         address _owner,
@@ -151,6 +177,7 @@ contract UpwardAuction is
         feeSystem.priceThreshold = _priceThreshold;
         feeSystem.dinamicFee = _dinamicFee;
     }
+    */
 
     /**
      * @dev Updates the address of the ERC1155 bond contract.
@@ -798,5 +825,15 @@ contract UpwardAuction is
         address _user
     ) public view virtual returns (uint) {
         return lockBalance[_user];
+    }
+
+    /**
+     * @dev Returns the address of the bond contract.
+     * @return The address of the bond contract currently set in the system.
+     * @notice This function provides visibility into the bond contract address
+     *         for external users or systems interacting with the contract.
+     */
+    function showBondContractAddress() public view returns (address) {
+        return bondContract;
     }
 }

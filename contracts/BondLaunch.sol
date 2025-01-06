@@ -183,6 +183,7 @@ contract BondLaunch is
      * @param _id The ID of the bond being withdrawn.
      */
     function withdrawBondBuy(uint _id) external nonReentrant whenNotPaused {
+        require(bondBuyForUser[msg.sender][_id]>0,"Not bond for withdraw");
         uint amount = bondBuyForUser[msg.sender][_id]; // Retrieve the number of bonds purchased by the user.
         bondBuyForUser[msg.sender][_id] = 0; // Reset the user's purchased bond balance.
         _depositBond(address(this), msg.sender, _id, amount); // Transfer the bonds to the user.

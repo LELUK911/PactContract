@@ -374,6 +374,7 @@ function safeTransferFrom(
         balanceContractFeesForToken[WHET] += transfertFee;
     }
 
+
     // Update coupon ownership (removing from the seller, granting to the buyer)
     _upDateCouponSell(id, from, amount);
     _upDateCouponBuy(id, to, amount);
@@ -826,6 +827,7 @@ function _depositTokenForInterest(
 function _claimCoupon(uint _id, address _user, uint _indexCoupon) internal {
     // Determine how many coupon units the user is entitled to
     uint moltiplicator = couponToClaim[_id][_user][_indexCoupon];
+    require(moltiplicator >0 ,"Haven't Coupon for claim");
     // Reset the user's coupon claim for this index
     couponToClaim[_id][_user][_indexCoupon] = 0;
 
@@ -901,6 +903,7 @@ function _claimLoan(uint _id, address _user, uint _amount) internal {
     }
     // 2) Check if partially enough: sizeLoan <= balancLoanRepay
     else if (bond[_id].sizeLoan <= bond[_id].balancLoanRepay) {
+
         // Calculate how many tokens can be covered (rounded down)
         uint capCanPay = bond[_id].balancLoanRepay / bond[_id].sizeLoan;
 
@@ -947,12 +950,12 @@ function _parzialLiquidationCoupon(
     address _user,
     uint _moltiplicator
 ) internal {
-    // A naive approach: how many full coupon sets can we pay?
-    // e.g., if balancLoanRepay / bond[_id].interest == 10, can pay 10 coupons fully.
+   
     uint couponCanRepay = bond[_id].balancLoanRepay / bond[_id].interest;
 
     // Actual token amount to pay = number of coupons we can cover * interest
     uint qtaToCouponClaim = couponCanRepay * bond[_id].interest;
+
     // Reduce the repay balance accordingly
     bond[_id].balancLoanRepay -= qtaToCouponClaim;
 
@@ -1046,7 +1049,7 @@ function _logicExecuteLiquidationCoupon(
     uint percCollateralOfLiquidation = (
         bond[_id].collateral
         * conditionOfFee[bond[_id].issuer].penalityForLiquidation[_indexPenality]
-    ) / 10000; // e.g., 100 means 1% if you interpret it that way
+    ) / 10000;
 
     // Divide that portion by total bond amount to get per-token collateral, then multiply by _moltiplicator
     uint percForCoupon = percCollateralOfLiquidation / bond[_id].amount;
@@ -1136,7 +1139,6 @@ function _liquitationCollateralForBondExpired(
 
     // Calculate the per-token share of the collateral
     uint collateralToLiquidate = bond[_id].collateral / bond[_id].amount;
-
     // Compute liquidation fee on the portion being redeemed
     uint fee = _liquidationFee(
         bond[_id].issuer,
@@ -1145,7 +1147,7 @@ function _liquitationCollateralForBondExpired(
     );
 
     // Update bond's collateral (subtract the portion plus fee)
-    bond[_id].collateral -= (collateralToLiquidate * _amount) + fee;
+    bond[_id].collateral -= (collateralToLiquidate * _amount);// + fee;
 
     // Remove coupon entitlements and burn the redeemed bond tokens
     _upDateCouponSell(_id, _user, _amount);

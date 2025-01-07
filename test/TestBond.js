@@ -1,10 +1,10 @@
 const { expect } = require("chai");
-const { ethers, upgrades } = require("hardhat");
+const { ethers } = require("hardhat");
 
-describe('Test proxy Bond, stable version', () => {
+describe('Test Bond, stable version', () => {
 
-    let bondContract, mockWETH, mockDai, mockBTC, owner, issuer, user1, user2, user3, user4;
-    let bondContractAddress, daiAddress, btcAddress, WETHaddress;
+    let bondContract, mockWETH, mockDai, mockBTC, mockAlt, owner, issuer, user1, user2, user3, user4;
+    let bondContractAddress, daiAddress, btcAddress, WETHaddress, Altaddress;
     let launchBondContract, launchBondContractAddress
     let upwardAuctionContract, upwardAuctionContractAddress
     let downwardAuctionContract, downwardAuctionContractAddress
@@ -28,9 +28,10 @@ describe('Test proxy Bond, stable version', () => {
         launchBondContractAddress = await launchBondContract.getAddress()
 
         const MockToken = await ethers.getContractFactory('MockToken');
-        mockWETH = await MockToken.deploy(ethers.parseUnits('9000000000000'), 'WETH', 'WETH');
-        mockDai = await MockToken.deploy(ethers.parseUnits('9000000000000'), 'Dai Token', 'DAI');
-        mockBTC = await MockToken.deploy(ethers.parseUnits('9000000000000'), 'Bitcoin', 'BTC');
+        mockWETH = await MockToken.deploy(ethers.parseUnits('90000000000000000000'), 'WETH', 'WETH');
+        mockDai = await MockToken.deploy(ethers.parseUnits('90000000000000000000'), 'Dai Token', 'DAI');
+        mockBTC = await MockToken.deploy(ethers.parseUnits('90000000000000000000'), 'Bitcoin', 'BTC');
+        mockAlt = await MockToken.deploy(ethers.parseUnits('99999999999999999999999999'), 'ALtcoin', 'ALT');
 
         await mockBTC.connect(owner).transfer(issuer.address, ethers.parseUnits('1000000000000'))
         await mockDai.connect(owner).transfer(issuer.address, ethers.parseUnits('1000000000000'))
@@ -39,9 +40,12 @@ describe('Test proxy Bond, stable version', () => {
         await mockWETH.waitForDeployment()
         await mockDai.waitForDeployment()
         await mockBTC.waitForDeployment()
+        await mockAlt.waitForDeployment()
         daiAddress = await mockDai.getAddress()
         btcAddress = await mockBTC.getAddress()
         WETHaddress = await mockWETH.getAddress()
+        Altaddress = await mockAlt.getAddress()
+
 
         //? UPWARD DEPLOY AND PRELIMINAR ACTION
         const UpwardAuction = await ethers.getContractFactory('UpwardAuction')
@@ -391,7 +395,7 @@ describe('Test proxy Bond, stable version', () => {
         await expect(bondContract.connect(issuer).depositTokenForInterest(4, ethers.parseUnits('640000'))).to.emit(bondContract, 'InterestDeposited')
 
         // in next time over expiredBond
-        await ethers.provider.send("evm_increaseTime", [expiredBond + 10000]);
+        await ethers.provider.send("evm_increaseTime", [expiredBond + 1]);
         await ethers.provider.send("evm_mine");
 
         await expect(bondContract.connect(user1).claimCouponForUSer(4, 0)).to.emit(bondContract, "CouponClaimed");
@@ -422,6 +426,10 @@ describe('Test proxy Bond, stable version', () => {
         await expect(bondContract.connect(user2).claimLoan(4, 15)).to.emit(bondContract, "LoanClaimed");
         await expect(bondContract.connect(user3).claimLoan(4, 385)).to.emit(bondContract, "LoanClaimed");
         await expect(bondContract.connect(owner).withdrawContractBalance(daiAddress)).to.emit(bondContract, 'WitrawBalanceContracr')
+
+        //** User can withdraw collateral */
+        await expect(bondContract.connect(issuer).withdrawCollateral(4)).to.emit(bondContract, 'CollateralWithdrawn')
+
     })
     it("Iusser pay for all coupon and repay all bond -> user send more bond at other user", async () => {
         //? Approve spending
@@ -608,7 +616,7 @@ describe('Test proxy Bond, stable version', () => {
 
 
 
-        
+
     })
     it("Iuser don't pay parzial loan but pay all coupon, single liquidation event for one user (Balance loan  at expired)", async () => {
         //? Approve spending
@@ -634,10 +642,10 @@ describe('Test proxy Bond, stable version', () => {
         await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
         await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
 
-        const sizeBond = ethers.parseUnits(((10 * 100)*3).toString());
+        const sizeBond = ethers.parseUnits(((10 * 100) * 3).toString());
         await mockDai.connect(owner).transfer(issuer, sizeBond);
         await mockDai.connect(issuer).approve(bondContractAddress, sizeBond);
-        
+
         await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeBond)).to.emit(bondContract, 'InterestDeposited')
 
         const sizeBond1 = ethers.parseUnits((100 * 100).toString());
@@ -659,7 +667,7 @@ describe('Test proxy Bond, stable version', () => {
             expect(BTCBalance.toString()).to.eq('0')
         }
 
-        
+
 
         const BTCBalanceBefore = await mockBTC.connect(owner).balanceOf(user1.address);
         const DaiBalanceBefore = await mockDai.connect(owner).balanceOf(user1.address);
@@ -668,10 +676,10 @@ describe('Test proxy Bond, stable version', () => {
         await expect(bondContract.connect(user1).claimLoan(1, 100)).to.emit(bondContract, "LoanClaimed");
         const BTCBalanceAfter = await mockBTC.connect(owner).balanceOf(user1.address);
         const DaiBalanceAfter = await mockDai.connect(owner).balanceOf(user1.address);
-        
+
         expect(+BTCBalanceBefore.toString()).to.below(+BTCBalanceAfter.toString())
         expect(+DaiBalanceBefore.toString()).to.below(+DaiBalanceAfter.toString())
-    
+
     })
     it("Iuser don't pay parzial loan but pay all coupon, single liquidation event for one user (Balance loan  at expired)", async () => {
         //? Approve spending
@@ -697,10 +705,10 @@ describe('Test proxy Bond, stable version', () => {
         await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
         await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
 
-        const sizeBond = ethers.parseUnits(((10 * 100)*7).toString());
+        const sizeBond = ethers.parseUnits(((10 * 100) * 7).toString());
         await mockDai.connect(owner).transfer(issuer, sizeBond);
         await mockDai.connect(issuer).approve(bondContractAddress, sizeBond);
-        
+
         await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeBond)).to.emit(bondContract, 'InterestDeposited')
 
         const sizeBond1 = ethers.parseUnits((100 * 100).toString());
@@ -722,7 +730,7 @@ describe('Test proxy Bond, stable version', () => {
             expect(BTCBalance.toString()).to.eq('0')
         }
 
-        
+
 
         const BTCBalanceBefore = await mockBTC.connect(owner).balanceOf(user1.address);
         const DaiBalanceBefore = await mockDai.connect(owner).balanceOf(user1.address);
@@ -731,10 +739,10 @@ describe('Test proxy Bond, stable version', () => {
         await expect(bondContract.connect(user1).claimLoan(1, 100)).to.emit(bondContract, "LoanClaimed");
         const BTCBalanceAfter = await mockBTC.connect(owner).balanceOf(user1.address);
         const DaiBalanceAfter = await mockDai.connect(owner).balanceOf(user1.address);
-        
+
         expect(+BTCBalanceBefore.toString()).to.below(+BTCBalanceAfter.toString())
         expect(+DaiBalanceBefore.toString()).to.below(+DaiBalanceAfter.toString())
-    
+
     })
     it("Iuser don't pay loan but pay all coupon, single liquidation event for one user (Balance loan  at expired)", async () => {
         //? Approve spending
@@ -760,10 +768,10 @@ describe('Test proxy Bond, stable version', () => {
         await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
         await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
 
-        const sizeBond = ethers.parseUnits(((10 * 100)*6).toString());
+        const sizeBond = ethers.parseUnits(((10 * 100) * 6).toString());
         await mockDai.connect(owner).transfer(issuer, sizeBond);
         await mockDai.connect(issuer).approve(bondContractAddress, sizeBond);
-        
+
         await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeBond)).to.emit(bondContract, 'InterestDeposited')
 
         const sizeBond1 = ethers.parseUnits((100 * 100).toString());
@@ -792,12 +800,11 @@ describe('Test proxy Bond, stable version', () => {
         await expect(bondContract.connect(user1).claimLoan(1, 100)).to.emit(bondContract, "LiquitationCollateralBondExpired");
         const BTCBalanceAfter = await mockBTC.connect(owner).balanceOf(user1.address);
         const DaiBalanceAfter = await mockDai.connect(owner).balanceOf(user1.address);
-        
+
         expect(+BTCBalanceBefore.toString()).to.below(+BTCBalanceAfter.toString())
         expect(+DaiBalanceBefore.toString()).to.eq(+DaiBalanceAfter.toString())
-    
-    })
 
+    })
     it("Iuser don't pay one coupon but pay all loan, single liquidation event for one user", async () => {
         //? Approve spending
         await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
@@ -822,10 +829,10 @@ describe('Test proxy Bond, stable version', () => {
         await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
         await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
 
-        const sizeBond = ethers.parseUnits((((10 * 100)*6)-250).toString());
+        const sizeBond = ethers.parseUnits((((10 * 100) * 6) - 250).toString());
         await mockDai.connect(owner).transfer(issuer, sizeBond);
         await mockDai.connect(issuer).approve(bondContractAddress, sizeBond);
-        
+
         await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeBond)).to.emit(bondContract, 'InterestDeposited')
 
         const sizeBond1 = ethers.parseUnits((100 * 100).toString());
@@ -844,13 +851,13 @@ describe('Test proxy Bond, stable version', () => {
         for (let index = 0; index < couponMaturity.length; index++) {
             await expect(bondContract.connect(user1).claimCouponForUSer(1, index)).to.emit(bondContract, "CouponClaimed");
             const BTCBalance = await mockBTC.connect(owner).balanceOf(user1.address);
-            if(BTCBalance.toString()!='0'){
+            if (BTCBalance.toString() != '0') {
                 //console.log(index);
-            }else{expect(BTCBalance.toString()).to.eq('0')}
+            } else { expect(BTCBalance.toString()).to.eq('0') }
         }
 
 
-        const sizeBondRepay = ethers.parseUnits((100*100).toString());
+        const sizeBondRepay = ethers.parseUnits((100 * 100).toString());
         await mockDai.connect(owner).transfer(issuer, sizeBondRepay);
         await mockDai.connect(issuer).approve(bondContractAddress, sizeBondRepay);
 
@@ -861,11 +868,459 @@ describe('Test proxy Bond, stable version', () => {
         await expect(bondContract.connect(user1).claimLoan(1, 100)).to.emit(bondContract, "LiquitationCollateralBondExpired");
         const BTCBalanceAfter = await mockBTC.connect(owner).balanceOf(user1.address);
         const DaiBalanceAfter = await mockDai.connect(owner).balanceOf(user1.address);
-        
+
         expect(+BTCBalanceBefore.toString()).to.below(+BTCBalanceAfter.toString())
         expect(+DaiBalanceBefore.toString()).to.eq(+DaiBalanceAfter.toString())
-    
+
+
+
+        //**USER CAN CLAIM All points */
+        await expect(bondContract.connect(issuer).claimScorePoint(1)).be.rejectedWith('No points left to claim')
+
+
+    })
+    it("Iuser don't nothing and more user liquidate it, liquidation on coupon", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockWETH.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+        const sizeBond1 = ethers.parseUnits((100 * 50).toString());
+        await mockDai.connect(owner).transfer(user1, sizeBond1);
+        await mockDai.connect(owner).transfer(user2, sizeBond1);
+
+        await mockDai.connect(user1).approve(launchBondContractAddress, sizeBond1);
+        await mockDai.connect(user2).approve(launchBondContractAddress, sizeBond1);
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 50)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await expect(launchBondContract.connect(user2).buyBond(1, 0, 50)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user2).withdrawBondBuy(1)
+
+        // in next time over expiredBond
+        const dayInSecond = 86400;
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 40]);
+        await ethers.provider.send("evm_mine");
+
+        //**After  4 penalities the bond should liquidation  */
+
+        //** 1st penality
+        let BTCBalanceBeforeUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+        await expect(bondContract.connect(user1).claimCouponForUSer(1, 0)).to.emit(bondContract, "CouponClaimed");
+        let BTCBalanceAfterUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+
+        //** 2nd penality
+        let BTCBalanceBeforeUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        await expect(bondContract.connect(user2).claimCouponForUSer(1, 0)).to.emit(bondContract, "CouponClaimed");
+        let BTCBalanceAfterUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        expect(+BTCBalanceBeforeUser2.toString()).to.below(+BTCBalanceAfterUser2.toString())
+        expect(+BTCBalanceAfterUser1.toString()).to.below(+BTCBalanceAfterUser2.toString())
+
+        //** 3rd penality
+        BTCBalanceBeforeUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+        await expect(bondContract.connect(user1).claimCouponForUSer(1, 1)).to.emit(bondContract, "CouponClaimed");
+        BTCBalanceAfterUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+        expect(+BTCBalanceBeforeUser1.toString()).to.below(+BTCBalanceAfterUser1.toString())
+
+        //** 4nd penality
+        BTCBalanceBeforeUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        await expect(bondContract.connect(user2).claimCouponForUSer(1, 1)).to.emit(bondContract, "CouponClaimed");
+        BTCBalanceAfterUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        expect(+BTCBalanceBeforeUser2.toString()).to.below(+BTCBalanceAfterUser2.toString())
+        expect(+BTCBalanceAfterUser1.toString()).to.below(+BTCBalanceAfterUser2.toString())
+
+
+        //**  In this case the bond is  completely liquidate and user can't claim coupon
+        await expect(bondContract.connect(user1).claimCouponForUSer(1, 2)).be.rejectedWith("This bond is expired or totally liquidated");
+
+        //**  In this case the bond is  completely liquidate and user can't claim coupon
+        await expect(bondContract.connect(user1).claimLoan(1, 50)).to.emit(bondContract, "LiquitationCollateralBondExpired");
+
+        //**  Liquidate rest of bond
+        await expect(bondContract.connect(user2).claimLoan(1, 50)).to.emit(bondContract, "LiquitationCollateralBondExpired");
+
+    })
+    it("Iusser can withdraw collateral 15 days after repay all interests and bond", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockWETH.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        let currentBlock = await ethers.provider.getBlock("latest");
+        let currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 0
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+
+        //? Approve launchBondContract at spending ERC1155
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+
+        //? Launch Bond ID1
+        await expect(launchBondContract.connect(issuer).launchNewBond('0', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+        const sizeBond = ethers.parseUnits((1000 * 100).toString());
+
+        await mockDai.connect(owner).transfer(user1, sizeBond);
+        await mockDai.connect(user1).approve(launchBondContractAddress, sizeBond);
+
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 1, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+
+        const sizeLoan = ethers.parseUnits(
+            (((10 * 100) * 6) + (1000 * 100)).toString()
+        );
+        await mockDai.connect(owner).transfer(issuer, sizeLoan);
+        await mockDai.connect(issuer).approve(bondContractAddress, sizeLoan);
+        await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeLoan)).to.emit(bondContract, 'InterestDeposited')
+
+        const dayInSecond = 86400;
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 61]);
+        await ethers.provider.send("evm_mine");
+
+        for (let index = 0; index < couponMaturity.length; index++) {
+            const DaiBalanceBefore = await mockDai.connect(owner).balanceOf(user1.address);
+            const BTCBalanceBefore = await mockBTC.connect(owner).balanceOf(user1.address);
+
+            await expect(bondContract.connect(user1).claimCouponForUSer(1, index)).to.emit(bondContract, "CouponClaimed");
+            const DaiBalanceAfter = await mockDai.connect(owner).balanceOf(user1.address);
+            const BTCBalanceAfter = await mockBTC.connect(owner).balanceOf(user1.address);
+
+            expect(+DaiBalanceBefore.toString()).to.below(+DaiBalanceAfter.toString())
+            expect(BTCBalanceBefore.toString()).to.eq(BTCBalanceAfter.toString())
+            expect(BTCBalanceBefore.toString()).to.eq('0')
+        }
+
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 29]);
+        await ethers.provider.send("evm_mine");
+
+        await expect(bondContract.connect(user1).claimLoan(1, 100)).to.emit(bondContract, "LoanClaimed");
+
+        await expect(bondContract.connect(issuer).withdrawCollateral(1)).be.rejectedWith("the collateral lock-up period has not yet expired")
+
+
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 15]);
+        await ethers.provider.send("evm_mine");
+
+
+        let bondCollateralBalance = await bondContract.connect(issuer).showDeatailBondForId(1)
+        expect(bondCollateralBalance[8].toString()).be.eq('9850000000000000000')//total - fee
+
+
+        const BTCBalanceBeforeIusser = await mockBTC.connect(owner).balanceOf(issuer.address);
+        await expect(bondContract.connect(issuer).withdrawCollateral(1)).to.emit(bondContract, "CollateralWithdrawn")
+        const BTCBalanceAfterIusser = await mockBTC.connect(owner).balanceOf(issuer.address);
+        expect(+BTCBalanceBeforeIusser.toString()).to.below(+BTCBalanceAfterIusser.toString())
+
+        bondCollateralBalance = await bondContract.connect(issuer).showDeatailBondForId(1)
+        expect(bondCollateralBalance[8].toString()).be.eq('0')
+
+    })
+    it("Iusser can withdraw collateral 90 days after repay all interests and bond but have one penality and freez collateral", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockWETH.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        let currentBlock = await ethers.provider.getBlock("latest");
+        let currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 0
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+
+        //? Approve launchBondContract at spending ERC1155
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+
+        //? Launch Bond ID1
+        await expect(launchBondContract.connect(issuer).launchNewBond('0', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+        const sizeBond = ethers.parseUnits((1000 * 100).toString());
+
+        await mockDai.connect(owner).transfer(user1, sizeBond);
+        await mockDai.connect(user1).approve(launchBondContractAddress, sizeBond);
+
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 1, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+
+        const sizeLoan = ethers.parseUnits(
+            ((((10 * 100) * 6) + (1000 * 100)) - 500).toString()
+        );
+        await mockDai.connect(owner).transfer(issuer, sizeLoan);
+        await mockDai.connect(issuer).approve(bondContractAddress, sizeLoan);
+        await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeLoan)).to.emit(bondContract, 'InterestDeposited')
+
+        const dayInSecond = 86400;
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 61]);
+        await ethers.provider.send("evm_mine");
+
+        for (let index = 0; index < couponMaturity.length; index++) {
+            const DaiBalanceBefore = await mockDai.connect(owner).balanceOf(user1.address);
+            const BTCBalanceBefore = await mockBTC.connect(owner).balanceOf(user1.address);
+
+            await expect(bondContract.connect(user1).claimCouponForUSer(1, index)).to.emit(bondContract, "CouponClaimed");
+            const DaiBalanceAfter = await mockDai.connect(owner).balanceOf(user1.address);
+            const BTCBalanceAfter = await mockBTC.connect(owner).balanceOf(user1.address);
+
+            expect(+DaiBalanceBefore.toString()).to.below(+DaiBalanceAfter.toString())
+            expect(BTCBalanceBefore.toString()).to.eq(BTCBalanceAfter.toString())
+            expect(BTCBalanceBefore.toString()).to.eq('0')
+        }
+
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 29]);
+        await ethers.provider.send("evm_mine");
+
+        await expect(bondContract.connect(user1).claimLoan(1, 100)).to.emit(bondContract, "LoanClaimed");
+
+        await expect(bondContract.connect(issuer).withdrawCollateral(1)).be.rejectedWith("the collateral lock-up period has not yet expired")
+
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 15]);
+        await ethers.provider.send("evm_mine");
+        await expect(bondContract.connect(issuer).withdrawCollateral(1)).be.rejectedWith("the collateral lock-up period has not yet expired, extended to 90 days for liquidation")
+
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 75]);
+        await ethers.provider.send("evm_mine");
+
+        const BTCBalanceBeforeIusser = await mockBTC.connect(owner).balanceOf(issuer.address);
+        await expect(bondContract.connect(issuer).withdrawCollateral(1)).to.emit(bondContract, "CollateralWithdrawn")
+        const BTCBalanceAfterIusser = await mockBTC.connect(owner).balanceOf(issuer.address);
+        expect(+BTCBalanceBeforeIusser.toString()).to.below(+BTCBalanceAfterIusser.toString())
+
+        //**USER CAN CLAIM All points */
+
+        const scoreBefore = await bondContract.connect(issuer).checkStatusPoints(issuer.address)
+        await expect(bondContract.connect(issuer).claimScorePoint(1)).to.emit(bondContract, 'ScoreUpdated')
+        const scoreAfter = await bondContract.connect(issuer).checkStatusPoints(issuer.address)
+
+
+        expect(+scoreBefore[1].toString()).to.below(+scoreAfter[1].toString())
+        //700100 + 1955 (less 145 for coupon liquidate) = 702055
+        expect(scoreAfter[1].toString()).be.eq('702055')
+
+
+    })
+    it("Iusser claim points", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockWETH.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        let currentBlock = await ethers.provider.getBlock("latest");
+        let currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 0
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+
+        //? Approve launchBondContract at spending ERC1155
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+
+        //? Launch Bond ID1
+        await expect(launchBondContract.connect(issuer).launchNewBond('0', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+        const sizeBond = ethers.parseUnits((1000 * 100).toString());
+
+        await mockDai.connect(owner).transfer(user1, sizeBond);
+        await mockDai.connect(user1).approve(launchBondContractAddress, sizeBond);
+
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 1, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+
+        const sizeLoan = ethers.parseUnits(
+            (((10 * 100) * 6) + (1000 * 100)).toString()
+        );
+        await mockDai.connect(owner).transfer(issuer, sizeLoan);
+        await mockDai.connect(issuer).approve(bondContractAddress, sizeLoan);
+        await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeLoan)).to.emit(bondContract, 'InterestDeposited')
+
+        const dayInSecond = 86400;
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 61]);
+        await ethers.provider.send("evm_mine");
+
+        for (let index = 0; index < couponMaturity.length; index++) {
+            const DaiBalanceBefore = await mockDai.connect(owner).balanceOf(user1.address);
+            const BTCBalanceBefore = await mockBTC.connect(owner).balanceOf(user1.address);
+
+            await expect(bondContract.connect(user1).claimCouponForUSer(1, index)).to.emit(bondContract, "CouponClaimed");
+            const DaiBalanceAfter = await mockDai.connect(owner).balanceOf(user1.address);
+            const BTCBalanceAfter = await mockBTC.connect(owner).balanceOf(user1.address);
+
+            expect(+DaiBalanceBefore.toString()).to.below(+DaiBalanceAfter.toString())
+            expect(BTCBalanceBefore.toString()).to.eq(BTCBalanceAfter.toString())
+            expect(BTCBalanceBefore.toString()).to.eq('0')
+        }
+
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 29]);
+        await ethers.provider.send("evm_mine");
+
+        await expect(bondContract.connect(user1).claimLoan(1, 100)).to.emit(bondContract, "LoanClaimed");
+
+        await expect(bondContract.connect(issuer).withdrawCollateral(1)).be.rejectedWith("the collateral lock-up period has not yet expired")
+
+
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 15]);
+        await ethers.provider.send("evm_mine");
+
+
+        let bondCollateralBalance = await bondContract.connect(issuer).showDeatailBondForId(1)
+        expect(bondCollateralBalance[8].toString()).be.eq('9850000000000000000')//total - fee
+
+
+        const BTCBalanceBeforeIusser = await mockBTC.connect(owner).balanceOf(issuer.address);
+        await expect(bondContract.connect(issuer).withdrawCollateral(1)).to.emit(bondContract, "CollateralWithdrawn")
+        const BTCBalanceAfterIusser = await mockBTC.connect(owner).balanceOf(issuer.address);
+        expect(+BTCBalanceBeforeIusser.toString()).to.below(+BTCBalanceAfterIusser.toString())
+
+        bondCollateralBalance = await bondContract.connect(issuer).showDeatailBondForId(1)
+        expect(bondCollateralBalance[8].toString()).be.eq('0')
+
+        //**USER CAN CLAIM All points */
+
+        const scoreBefore = await bondContract.connect(issuer).checkStatusPoints(issuer.address)
+        await expect(bondContract.connect(issuer).claimScorePoint(1)).to.emit(bondContract, 'ScoreUpdated')
+        const scoreAfter = await bondContract.connect(issuer).checkStatusPoints(issuer.address)
+
+        expect(+scoreBefore[1].toString()).to.below(+scoreAfter[1].toString())
+        expect(scoreAfter[1].toString()).be.eq('702100')
+
+
+    })
+    it("Iusser can delete launch", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockWETH.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        let currentBlock = await ethers.provider.getBlock("latest");
+        let currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 0
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+
+        //? Approve launchBondContract at spending ERC1155
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+
+        //? Launch Bond ID1
+        await expect(launchBondContract.connect(issuer).launchNewBond('0', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+        await expect(launchBondContract.connect(user1).deleteLaunch(1,1)).be.rejectedWith(launchBondContract,'Only issuer Bond can launch this function')
+        
+
+        await expect(launchBondContract.connect(issuer).deleteLaunch(1,1)).to.emit(launchBondContract,'DeleteLaunch')
+
+        await mockWETH.connect(owner).transfer(issuer.address, ethers.parseUnits('1000000'));
+        await mockWETH.connect(issuer).approve(bondContractAddress, ethers.parseUnits('1000000'));
+
+        await expect(
+            bondContract.connect(issuer).safeTransferFrom(issuer.address, user2.address, 1, 100, "0x")
+        ).be.rejectedWith(bondContract, "1st tx must send Launcher");
+
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+
+    })
+    it("Bond Owner create new UpwardAuction", async ()=>{
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await bondContract.connect(user1).setApprovalForAll(upwardAuctionContractAddress, true);
+        
+
+
+
     })
 
-
 });
+
+
+
+

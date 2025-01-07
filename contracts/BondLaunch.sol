@@ -110,7 +110,7 @@ contract BondLaunch is
      * @dev Proxy initializer function to replace the constructor.
      *      This function is used for initializing the contract when deployed as an upgradeable proxy.
      * @param _owner Address of the owner to set for the contract.
-     
+    
     function initialize(address _owner) public initializer {
         __Ownable_init(); // Initializes the OwnableUpgradeable contract to handle ownership.
         transferOwnership(_owner); // Transfers ownership to the specified owner address.

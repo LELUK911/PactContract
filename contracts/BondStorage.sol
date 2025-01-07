@@ -65,6 +65,18 @@ uint internal bondId;
 uint internal COUPON_FEE = 5;
 uint[4] internal LIQUIDATION_FEE = [5,15,30,50];
 
+
+
+// Case 1: new user or medium range
+uint[3] internal mediumPenalties = [uint(100), uint(200), uint(400)];
+// Case 2: high score (>1M)
+uint[3] internal highPenalties = [uint(50), uint(100), uint(200)];
+// Case 3: low score [500k, 700k)
+uint[3] internal lowPenalties = [uint(200), uint(400), uint(600)];
+// Case 4: very low score (<500k)
+uint[3] internal veryLowPenalties = [uint(280), uint(450), uint(720)];
+
+
 /**
  * @dev Maps each address to its ConditionOfFee struct, defining penalties and score.
  */
@@ -133,4 +145,29 @@ mapping(uint => bool) internal firstTransfer;
  */
 mapping(address => uint) internal balanceContractFeesForToken;
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+   
+
+
+
+
+
 }
+
+
+
+

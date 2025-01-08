@@ -734,6 +734,7 @@ contract DownwardAuction is
         address oldOwner = auctions[_index].owner;
 
         // Apply penalties to the pot
+        uint initialPot = auctions[_index].pot;
         uint pot = auctions[_index].pot;
         for (uint i = 0; i < auctions[_index].penality.length; i++) {
             if (pot == 0) {
@@ -752,8 +753,8 @@ contract DownwardAuction is
         auctions[_index].owner = newOwner;
 
         // Adjust the balance and locked funds of the participants
-        balanceUser[newOwner] -= pot;
-        _updateLockBalance(newOwner, pot, false); // Unlock funds for the new owner
+        balanceUser[newOwner] -= initialPot;
+        _updateLockBalance(newOwner, initialPot, false); // Unlock funds for the new owner
         balanceUser[oldOwner] += pot;
     }
 

@@ -1269,10 +1269,10 @@ describe('Test Bond, stable version', () => {
         await expect(launchBondContract.connect(issuer).launchNewBond('0', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
         await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
 
-        await expect(launchBondContract.connect(user1).deleteLaunch(1,1)).be.rejectedWith(launchBondContract,'Only issuer Bond can launch this function')
-        
+        await expect(launchBondContract.connect(user1).deleteLaunch(1, 1)).be.rejectedWith(launchBondContract, 'Only issuer Bond can launch this function')
 
-        await expect(launchBondContract.connect(issuer).deleteLaunch(1,1)).to.emit(launchBondContract,'DeleteLaunch')
+
+        await expect(launchBondContract.connect(issuer).deleteLaunch(1, 1)).to.emit(launchBondContract, 'DeleteLaunch')
 
         await mockWETH.connect(owner).transfer(issuer.address, ethers.parseUnits('1000000'));
         await mockWETH.connect(issuer).approve(bondContractAddress, ethers.parseUnits('1000000'));
@@ -1285,7 +1285,7 @@ describe('Test Bond, stable version', () => {
 
 
     })
-    it("Bond Owner create new UpwardAuction", async ()=>{
+    it("Bond Owner create new UpwardAuction", async () => {
         //? Approve spending
         await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
         await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
@@ -1309,16 +1309,391 @@ describe('Test Bond, stable version', () => {
         await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
 
 
+        await mockDai.connect(owner).transfer(user1.address, ethers.parseUnits('10000'))
+        await mockDai.connect(user1).approve(launchBondContractAddress, ethers.parseUnits('10000'))
+
         await expect(launchBondContract.connect(user1).buyBond(1, 0, 100)).to.emit(launchBondContract, 'BuyBond')
         await launchBondContract.connect(user1).withdrawBondBuy(1)
 
         await bondContract.connect(user1).setApprovalForAll(upwardAuctionContractAddress, true);
-        
 
+        const startPrice = ethers.parseUnits('110')
+        const expiredAuction = currentTimestamp + (86400 * 90);
 
+        await expect(upwardAuctionContract.connect(user1).newAcutionBond(1, 0, startPrice, expiredAuction)).be.rejectedWith("Set correct bond's amount")
+        await expect(upwardAuctionContract.connect(user1).newAcutionBond(1, 100, 0, expiredAuction)).be.rejectedWith("Set correct start price")
+        await expect(upwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction - (86400 * 90))).be.rejectedWith("Set correct expired period")
+        await expect(upwardAuctionContract.connect(user2).newAcutionBond(1, 100, startPrice, expiredAuction - (86400 * 90))).be.rejected
 
+        await expect(upwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction)).to.emit(upwardAuctionContract, 'NewAuction')
     })
+    it("Users bet in pot", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
 
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+
+        await mockDai.connect(owner).transfer(user1.address, ethers.parseUnits('10000'))
+        await mockDai.connect(user1).approve(launchBondContractAddress, ethers.parseUnits('10000'))
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await bondContract.connect(user1).setApprovalForAll(upwardAuctionContractAddress, true);
+
+        const startPrice = ethers.parseUnits('110')
+        const expiredAuction = currentTimestamp + (86400 * 10);
+        await expect(upwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction)).to.emit(upwardAuctionContract, 'NewAuction')
+
+
+        await mockDai.connect(owner).transfer(user2.address, ethers.parseUnits('1000000'))
+        await mockDai.connect(user2).approve(upwardAuctionContractAddress, ethers.parseUnits('1000000'))
+
+        await mockDai.connect(owner).transfer(user3.address, ethers.parseUnits('1000000'))
+        await mockDai.connect(user3).approve(upwardAuctionContractAddress, ethers.parseUnits('1000000'))
+
+        // not bet with low pot (remember fee)
+        const lowBet = ethers.parseUnits('100')
+        await expect(upwardAuctionContract.connect(user2).instalmentPot(0, lowBet)).be.rejectedWith("This pot is low then start Price")
+
+        const newBet = ethers.parseUnits((110 * 1.15).toString())
+        const fixedFee = ethers.parseUnits('1')
+        await expect(upwardAuctionContract.connect(user3).instalmentPot(0, newBet)).to.emit(upwardAuctionContract, "newInstalmentPot")
+
+        let showAuctionForIndex = await upwardAuctionContract.connect(user3).showAuction(0);
+        // 5 puntata
+        // 6 player
+        const tolerance = ethers.parseUnits('0.00000000000001'); // 10 wei
+        expect(
+            Math.abs(
+                (+showAuctionForIndex[5].toString()) - ((+newBet.toString()) - (+fixedFee.toString()))
+            )
+        ).to.be.lessThanOrEqual(+tolerance.toString());
+        expect(showAuctionForIndex[6]).eq(user3.address)
+
+        const newBetLow = ethers.parseUnits((110 * 1.15).toString())
+        await expect(upwardAuctionContract.connect(user2).instalmentPot(0, newBetLow)).be.rejectedWith("This pot is low then already pot")
+
+        showAuctionForIndex = await upwardAuctionContract.connect(user3).showAuction(0);
+        expect(showAuctionForIndex[6]).eq(user3.address)
+
+
+        const newBet1 = ethers.parseUnits((140).toString())
+        await expect(upwardAuctionContract.connect(user2).instalmentPot(0, newBet1)).to.emit(upwardAuctionContract, "newInstalmentPot")
+        showAuctionForIndex = await upwardAuctionContract.connect(user3).showAuction(0);
+        // 5 puntata
+        // 6 player
+
+        expect(
+            Math.abs(
+                (+showAuctionForIndex[5].toString()) - ((+newBet1.toString()) - (+fixedFee.toString()))
+            )
+        ).to.be.lessThanOrEqual(+tolerance.toString());
+
+        expect(showAuctionForIndex[6]).eq(user2.address)
+
+
+        await expect(upwardAuctionContract.connect(user1).closeAuction(0)).be.rejectedWith('This auction is not expired')
+        await expect(upwardAuctionContract.connect(owner).closeAuction(0)).be.rejectedWith('This auction is not expired')
+        await expect(upwardAuctionContract.connect(user3).closeAuction(0)).be.rejectedWith('This auction is not expired')
+
+
+        const dayInSecond = 86400
+        await ethers.provider.send("evm_increaseTime", [expiredAuction + dayInSecond]);
+        await ethers.provider.send("evm_mine", []);
+
+        let freeBalanceUser = await upwardAuctionContract.connect(user2).showUserBalanceFree(user2);
+        let lockBalanceUser = await upwardAuctionContract.connect(user2).showUserBalanceLock(user2);
+
+        expect(freeBalanceUser.toString()).be.eq(lockBalanceUser.toString())
+        expect(
+            Math.abs(
+                ((+newBet1.toString()) - (+fixedFee.toString()))
+            )
+        ).be.eq(+lockBalanceUser.toString());
+        expect(await upwardAuctionContract.connect(user1).showUserBalanceFree(user1)).be.eq('0')
+        const freeBalanceOwnerAuctionBefore = await upwardAuctionContract.connect(user2).showUserBalanceFree(user1);
+
+        //l'utente vincitore pup chiudere l'asta
+        await expect(upwardAuctionContract.connect(user2).closeAuction(0)).to.emit(upwardAuctionContract, 'CloseAuction')
+        
+        freeBalanceUser = await upwardAuctionContract.connect(user2).showUserBalanceFree(user2);
+        lockBalanceUser = await upwardAuctionContract.connect(user2).showUserBalanceLock(user2);
+
+        expect(freeBalanceUser.toString()).be.eq(lockBalanceUser.toString())
+        expect(freeBalanceUser.toString()).be.eq('0')
+        expect(lockBalanceUser.toString()).be.eq('0')
+        // l'utente puo ritirare il bond vinto
+        await expect(upwardAuctionContract.connect(user2).withDrawBond(0)).to.emit(upwardAuctionContract, 'WithDrawBond')
+        // il venditore puo ritirare i suoi soldi
+        const freeBalanceOwnerAuctionAfter = await upwardAuctionContract.connect(user2).showUserBalanceFree(user1);
+        expect(+freeBalanceOwnerAuctionBefore.toString()).to.be.lessThan(+freeBalanceOwnerAuctionAfter.toString())
+        await expect(upwardAuctionContract.connect(user1).withdrawMoney(freeBalanceOwnerAuctionAfter.toString())).be.emit(upwardAuctionContract, 'WithDrawMoney')
+    })
+    it("CoolDown Work?", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+
+        await mockDai.connect(owner).transfer(user1.address, ethers.parseUnits('10000'))
+        await mockDai.connect(user1).approve(launchBondContractAddress, ethers.parseUnits('10000'))
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await bondContract.connect(user1).setApprovalForAll(upwardAuctionContractAddress, true);
+
+        // Creiamo una nuova asta
+        const startPrice = ethers.parseUnits('99000')
+        const expiredAuction = currentTimestamp + (86400 * 10);
+        await expect(upwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction)).to.emit(upwardAuctionContract, 'NewAuction')
+
+        // approviamo la spesa per le puntante
+        await mockDai.connect(owner).approve(upwardAuctionContract, ethers.parseUnits('999999999'))
+        // TODO bisogna ricordarsi di settare il cooldown
+        await upwardAuctionContract.connect(owner).setCoolDown(3)
+        await expect(upwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('110000'))).to.emit(upwardAuctionContract, 'newInstalmentPot')
+        // ! il cool down dovrebbe impedirmi di puntare di nuovo prima di 3 secondi
+        await expect(upwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('120000'))).be.revertedWith('Wait for pot again')
+        await expect(upwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('130000'))).be.revertedWith('Wait for pot again')
+        
+        // * dopo 3 secondi dovrebbe andare regolarmente
+        setTimeout(async () => {
+            await expect(upwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('140000'))).to.emit(upwardAuctionContract, 'newInstalmentPot')
+            }, 3000)
+    })
+    it("Check Fees system", async () => {
+        // ! NON IMPOSTO IL COOLDOWN PER FACILITARE I TEST
+        
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(upwardAuctionContractAddress, ethers.parseUnits('999999999'))
+
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+
+        await mockDai.connect(owner).transfer(user1.address, ethers.parseUnits('10000'))
+        await mockDai.connect(user1).approve(launchBondContractAddress, ethers.parseUnits('10000'))
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await bondContract.connect(user1).setApprovalForAll(upwardAuctionContractAddress, true);
+
+        // Creiamo una nuova asta
+        const startPrice = ethers.parseUnits('98000')
+        const expiredAuction = currentTimestamp + (86400 * 10);
+        await expect(upwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction)).to.emit(upwardAuctionContract, 'NewAuction')
+
+
+
+        // ! Qui il bilancio delle Fees dovrebbe essere a 0
+        let feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
+        expect(feesBalance.toString()).eq('0')
+
+        // * 1 PUNTATA
+        await expect(upwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('100000'))).to.emit(upwardAuctionContract, 'newInstalmentPot')
+
+        // ? le Fees si aggiornano?
+        feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
+        expect(feesBalance).eq(ethers.parseUnits('1000')) //? SI
+
+        // * 2 PUNTATA
+        await expect(upwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('120000'))).to.emit(upwardAuctionContract, 'newInstalmentPot')
+
+        // ? le Fees si aggiornano?
+        feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
+        expect(feesBalance).eq(ethers.parseUnits('2200')) //?SI
+        //* PRELEVIAMO LE FEE GENERATE CON LE PUNTATE
+        await upwardAuctionContract.connect(owner).withdrawFees()
+        feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
+        expect(feesBalance).eq(ethers.parseUnits('0'))
+        //! ORA CONTROLLIAMO LE FEE SUL VENDITORE
+        const secondsToAdd = Math.floor(Date.now() / 1000) + (86400 * 80) //? una DATA vale l'altra
+        await ethers.provider.send("evm_increaseTime", [secondsToAdd]);
+        await ethers.provider.send("evm_mine", []);
+        const finalPot = await upwardAuctionContract.connect(user1).showAuction(0);
+        const finalPotNumber = +(ethers.formatUnits(finalPot[5], "ether"))
+        const fees = (finalPotNumber * 0.25) / 100 //? calcolo la fee che mi spetta
+        //l'utente vincitore puO chiudere l'asta
+        await expect(upwardAuctionContract.connect(owner).closeAuction(0)).to.emit(upwardAuctionContract, 'CloseAuction')
+        // l'utente puo ritirare il bond vinto
+        await expect(upwardAuctionContract.connect(owner).withDrawBond(0)).to.emit(upwardAuctionContract, 'WithDrawBond')
+        // il venditore puo ritirare i suoi soldi
+        await expect(upwardAuctionContract.connect(user1).withdrawMoney('90000')).be.emit(upwardAuctionContract, 'WithDrawMoney')
+        feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
+        expect(feesBalance).eq(ethers.parseUnits(fees.toString()))
+    })
+    it("Bond Owner create new DownwardAuction", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+
+        await mockDai.connect(owner).transfer(user1.address, ethers.parseUnits('10000'))
+        await mockDai.connect(user1).approve(launchBondContractAddress, ethers.parseUnits('10000'))
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await bondContract.connect(user1).setApprovalForAll(downwardAuctionContractAddress, true);
+
+        const startPrice = ethers.parseUnits('110')
+        const expiredAuction = currentTimestamp + (86400 * 90);
+
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 0, startPrice, expiredAuction,500)).be.rejectedWith("Set correct bond's amount")
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 100, 0, expiredAuction,500)).be.rejectedWith("Set correct start price")
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction - (86400 * 90),500)).be.rejectedWith("Set correct expired period")
+        await expect(downwardAuctionContract.connect(user2).newAcutionBond(1, 100, startPrice, expiredAuction - (86400 * 90),500)).be.rejected
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction,500)).to.emit(downwardAuctionContract, 'NewAuction')
+    })
+    it("Pot on a Auction", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+
+        await mockDai.connect(owner).transfer(user1.address, ethers.parseUnits('10000'))
+        await mockDai.connect(user1).approve(launchBondContractAddress, ethers.parseUnits('10000'))
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 100)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await bondContract.connect(user1).setApprovalForAll(downwardAuctionContractAddress, true);
+
+        const startPrice = ethers.parseUnits('110')
+        const expiredAuction = currentTimestamp + (86400 * 90);
+
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 0, startPrice, expiredAuction,500)).be.rejectedWith("Set correct bond's amount")
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 100, 0, expiredAuction,500)).be.rejectedWith("Set correct start price")
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction - (86400 * 90),500)).be.rejectedWith("Set correct expired period")
+        await expect(downwardAuctionContract.connect(user2).newAcutionBond(1, 100, startPrice, expiredAuction - (86400 * 90),500)).be.rejected
+        await expect(downwardAuctionContract.connect(user1).newAcutionBond(1, 100, startPrice, expiredAuction,500)).to.emit(downwardAuctionContract, 'NewAuction')
+        //trasferiamo i fondi necessari
+        await mockDai.connect(owner).transfer(user2.address, ethers.parseUnits('999999999'))
+        // approviamo la spesa per le puntante
+        await mockDai.connect(owner).approve(downwardAuctionContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(user2).approve(downwardAuctionContractAddress, ethers.parseUnits('999999999'))
+        await expect(downwardAuctionContract.connect(user2).instalmentPot(0, ethers.parseUnits('97000'))).to.emit(downwardAuctionContract, 'newInstalmentPot')
+        // 5 puntata
+        // 6 player
+        let showAuctionForIndex = await downwardAuctionContract.connect(user1).showAuction(0);
+        //console.log(showAuctionForIndex[5]) // veriricato di persona per ora
+
+        await expect(downwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('94090'))).to.emit(downwardAuctionContract, 'newInstalmentPot')
+        showAuctionForIndex = await downwardAuctionContract.connect(user1).showAuction(0);
+        // console.log(showAuctionForIndex[5]) // veriricato di persona per ora
+
+        expect(showAuctionForIndex[5].toString()).eq('93149100000000000000000')
+        expect(showAuctionForIndex[6]).eq(owner.address)
+
+        //controlliamo anche se chi non vince puo ritirare i soldi
+        await expect(downwardAuctionContract.connect(user2).withdrawMoney('9999900000')).to.emit(downwardAuctionContract, 'WithDrawMoney')
+
+        // controlliamo che chi ha puntato non puo ritirare i soldi 
+        await expect(downwardAuctionContract.connect(owner).withdrawMoney('9999900000')).be.rejectedWith('Free balance is low for this operation')
+
+        // controlliamo che il venditore non puo ritirare il bond
+        await expect(downwardAuctionContract.connect(user1).withDrawBond(0)).be.rejectedWith('This auction is Open')
+        // nessun altro puo ritirare i bond
+        await expect(downwardAuctionContract.connect(issuer).withDrawBond(0)).be.rejectedWith('Not Owner')
+    })
+ 
+
+
+
+    //! se non punta nessuno il proprietario va esentato dal pagare le fee di vincita
 });
 
 

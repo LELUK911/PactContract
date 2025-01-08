@@ -291,8 +291,6 @@ describe("Test asta al rialzo", () => {
         await expect(contractUpwardAuction.connect(user2).instalmentPot(0, ethers.parseUnits('101100'))).to.emit(contractUpwardAuction, 'newInstalmentPot')
         //* Questa no
         await expect(contractUpwardAuction.connect(owner).instalmentPot(0, ethers.parseUnits('101050'))).be.rejectedWith('This pot is low then already pot')
-
-
     })
     it("Prohibited operations", async () => {
         // ! NON IMPOSTO IL COOLDOWN PER FACILITARE I TEST

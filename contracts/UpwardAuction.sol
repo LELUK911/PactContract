@@ -38,18 +38,13 @@ import "./interface/Ibond.sol";
 // Custom interface specific to the project's bond functionality, providing a standardized way
 // for the contract to interact with bond-related operations or logic unique to this system.
 
-
 import {UpwardAuctionStorage} from "./UpwardAuctionStorage.sol";
 // Storage contract that contains the state variables and mappings required for the DownwardAuction system.
-
-
-
 
 //import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 //import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
 //import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 //import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-
 
 import {console} from "hardhat/console.sol";
 
@@ -141,7 +136,6 @@ contract UpwardAuction is
         _;
     }
 
-    
     constructor(
         address _bondContrac,
         address _money,
@@ -157,8 +151,7 @@ contract UpwardAuction is
         feeSystem.dinamicFee = _dinamicFee;
     }
 
-
-/*
+    /*
 
     function initialize(
         address _owner,
@@ -486,10 +479,19 @@ contract UpwardAuction is
             "This pot is low then already pot"
         ); // Ensure the new pot is greater than the current pot
         require(auctions[_index].owner != _player, "Owner can't pot"); // Owner cannot bid on their own auction
+
         require(
-            _amount <= ((auctions[_index].pot * MAX_POT_MULTIPLIER) / 100),
-            "Pot exceeds maximum allowed increment"
-        ); // Ensure the bid does not exceed the maximum allowed increment
+            auctions[_index].startPrice < _calcPotFee(_amount),
+            "This pot is low then start Price"
+        );
+
+        if (auctions[_index].pot > auctions[_index].pot) {
+            require(
+                _amount <= ((auctions[_index].pot * MAX_POT_MULTIPLIER) / 100),
+                "Pot exceeds maximum allowed increment"
+            ); // Ensure the bid does not exceed the maximum allowed increment
+        }
+
         coolDownControl(_player, _index); // Apply cooldown restrictions
 
         _depositErc20(_player, address(this), _amount); // Deposit bid amount
@@ -603,15 +605,16 @@ contract UpwardAuction is
 
         address newOwner = auctions[_index].player; // New owner is the highest bidder
         address oldOwner = auctions[_index].owner; // Old owner of the auction
+        uint originalPot = auctions[_index].pot; // Deduct fees from the pot
         uint pot = _paidSellFee(auctions[_index].pot); // Deduct fees from the pot
 
         auctions[_index].pot = 0; // Reset the pot
         auctions[_index].owner = newOwner; // Update the owner to the highest bidder
 
-        balanceUser[newOwner] -= pot; // Deduct the pot amount from the new owner's balance
+        balanceUser[newOwner] -= originalPot; // Deduct the pot amount from the new owner's balance
 
         //lockBalance[newOwner] -= pot;
-        _updateLockBalance(newOwner, pot, false); // Update the lock balance
+        _updateLockBalance(newOwner, originalPot, false); // Update the lock balance
         balanceUser[oldOwner] += pot; // Add the pot amount to the old owner's balance
     }
 

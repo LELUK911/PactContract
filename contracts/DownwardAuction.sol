@@ -34,6 +34,8 @@ import "./interface/Ibond.sol";
 import {DownwardAuctionStorage} from "./DownwardAuctionStorage.sol";
 // Storage contract that contains the state variables and mappings required for the DownwardAuction system.
 
+import {FullMath} from "./library/FullMath.sol";
+
 import {console} from "hardhat/console.sol";
 
 /**
@@ -624,10 +626,10 @@ contract DownwardAuction is
         require(_owner == auctions[_index].owner, "Not Owner");
         require(
             auctions[_index].expired > block.timestamp,
-            "This auction is not expired"
+            "This auction is expired"
         );
         require(auctions[_index].open == true, "This auction already close");
-        require(_newDiscount <= 1000, "Set correct discount");
+        require(_newDiscount <= 10000, "Set correct discount");
         require(
             auctions[_index].tolleratedDiscount < _newDiscount,
             "New discount must be greater than the current discount"
@@ -640,10 +642,12 @@ contract DownwardAuction is
                 OVER_PENALTY_FEE_PERCENTAGE,
                 block.timestamp
             );
+            auctions[_index].tolleratedDiscount = _newDiscount;
+            emit ChangeTolleratedDiscount(_index, _newDiscount);
+            return;
         } else if (auctions[_index].penality.length > MAX_PENALTY_ENTRIES) {
             revert("Reached limit of change and penalty");
         }
-
         if (auctions[_index].expired - block.timestamp >= 1 days) {
             // Add a penalty of 5% for changes made more than 1 day before expiration
             auctions[_index].penality.push(500);
@@ -657,6 +661,7 @@ contract DownwardAuction is
             // Add a penalty of 10% for changes made less than 1 hour before expiration
             auctions[_index].penality.push(1000);
         }
+
         auctions[_index].tolleratedDiscount = _newDiscount;
         emit ChangeTolleratedDiscount(_index, _newDiscount);
     }
@@ -684,8 +689,10 @@ contract DownwardAuction is
                 block.timestamp
             );
         } else if (auctions[_index].penality.length > MAX_PENALTY_ENTRIES) {
+            auctions[_index].open = false;
             _closeAuctionOperation(_index);
             emit EmergencyCloseAuction(msg.sender, _index);
+            return;
         }
 
         auctions[_index].open = false;
@@ -755,6 +762,7 @@ contract DownwardAuction is
         // Adjust the balance and locked funds of the participants
         balanceUser[newOwner] -= initialPot;
         _updateLockBalance(newOwner, initialPot, false); // Unlock funds for the new owner
+ 
         balanceUser[oldOwner] += pot;
     }
 
@@ -877,7 +885,8 @@ contract DownwardAuction is
         uint256 amount,
         uint256 bps
     ) internal pure virtual returns (uint) {
-        return (amount * bps) / 10000; // 10000 bps = 100%
+        return FullMath.mulDiv(amount, bps, 10000);
+        //return (amount * bps+9999) / 10000; // 10000 bps = 100%
     }
 
     /**
@@ -1052,7 +1061,6 @@ contract DownwardAuction is
                 _amount - calculateBasisPoints(_amount, feeSystem.dinamicFee);
         }
     }
-
 
     /**
      * @dev Returns the address of the bond contract.

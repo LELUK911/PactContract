@@ -146,7 +146,7 @@ mapping(uint => bool) internal firstTransfer;
 mapping(address => uint) internal balanceContractFeesForToken;
 
 
-
+mapping(uint=>uint) internal liquidationFactor;
 
 
 

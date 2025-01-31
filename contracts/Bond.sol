@@ -151,7 +151,7 @@ contract BondContract is
     /**
      * @dev Restricts access to functions so that only the bond's issuer can call them.
      *      Ensures that `msg.sender` matches the 'issuer' field in the Bond struct.
-    */
+     */
     modifier _onlyIssuer(uint _id) {
         require(
             msg.sender == bond[_id].issuer,
@@ -197,7 +197,6 @@ function initialize(address _owner) public initializer {
     function setUnPause() external onlyOwner {
         _unpause();
     }
-
 
     /**
      * @dev Updates the maximum number of coupons allowed for bonds.
@@ -371,11 +370,10 @@ function initialize(address _owner) public initializer {
     ) public override whenNotPaused nonReentrant {
         require(to != address(0), "ERC1155: transfer to the zero address");
 
-       // If this bond is flagged for the next transfer to go to launcher, enforce that
+        // If this bond is flagged for the next transfer to go to launcher, enforce that
         if (firstTransfer[id]) {
             require(to == launcherContract, "1st tx must send Launcher");
         }
-
 
         // If tokens move from the launcher back to the issuer, force the next transfer to go to the launcher
         if (from == launcherContract && to == bond[id].issuer) {
@@ -383,8 +381,6 @@ function initialize(address _owner) public initializer {
         } else {
             firstTransfer[id] = false;
         }
-
-     
 
         // Charge a transfer fee if both from/to are outside the ecosystem
         if (
@@ -495,7 +491,6 @@ function initialize(address _owner) public initializer {
      *  - Optionally, `_setInitialPrizePoint` seeds reward points for the issuer.
      *  - `_upDateCouponBuy` is called here for testing (may be removed or adjusted).
      *
-     * @param _issuer           The address issuing the bond.
      * @param _tokenLoan        The ERC20 token used to represent the bond's principal.
      * @param _sizeLoan         The total amount the issuer wants to borrow.
      * @param _interest         The interest (per coupon) or rate to be paid.
@@ -507,7 +502,6 @@ function initialize(address _owner) public initializer {
      * @param _describes        A descriptive string explaining the bond.
      */
     function createNewBond(
-        address _issuer,
         address _tokenLoan,
         uint _sizeLoan,
         uint _interest,
@@ -517,13 +511,17 @@ function initialize(address _owner) public initializer {
         uint _collateral,
         uint _amount,
         string calldata _describes
-    ) external whenNotPaused nonReentrant  {
+    ) external whenNotPaused nonReentrant {
         require(_thisIsERC20(_tokenLoan), "Set correct address for Token Loan");
         require(_sizeLoan > 0, "set correct size Loan for variables");
         require(_interest > 0, "set correct Interest for variables");
         require(_collateral > 0, "set correct Collateral for variables");
         require(_amount > 0, "set correct amount for variables");
         require(_couponMaturity.length <= MAX_COUPONS, "Too many coupons");
+        require(
+            _tokenCollateral != _tokenLoan,
+            "Set different Token Loan and Collateral"
+        );
 
         // Validate coupon schedule and final expiry
         require(
@@ -539,11 +537,11 @@ function initialize(address _owner) public initializer {
         );
 
         // Update the issuer's score and charge an issuance fee
-        _setScoreForUser(_issuer);
-        uint fee = _emisionBondFee(_issuer, _tokenCollateral, _collateral);
+        _setScoreForUser(msg.sender);
+        uint fee = _emisionBondFee(msg.sender, _tokenCollateral, _collateral);
 
         // Transfer collateral from issuer to this contract
-        _depositCollateralToken(_issuer, _tokenCollateral, _collateral);
+        _depositCollateralToken(msg.sender, _tokenCollateral, _collateral);
 
         // Prepare a unique bond ID
         uint currentId = bondId;
@@ -552,7 +550,7 @@ function initialize(address _owner) public initializer {
         // Store and initialize the new bond
         _createNewBond(
             currentId,
-            _issuer,
+            msg.sender,
             _tokenLoan,
             _sizeLoan,
             _interest,
@@ -566,10 +564,10 @@ function initialize(address _owner) public initializer {
         );
 
         // Assign initial prize score (if applicable)
-        _setInitialPrizePoint(currentId, _issuer, _amount, _sizeLoan);
+        _setInitialPrizePoint(currentId, msg.sender, _amount, _sizeLoan);
 
         // For testing/demo, updates coupons as if they're already held by the issuer
-        _upDateCouponBuy(currentId, _issuer, _amount); // This line may be removed later
+        _upDateCouponBuy(currentId, msg.sender, _amount); // This line may be removed later
     }
 
     /**
@@ -1123,19 +1121,20 @@ function initialize(address _owner) public initializer {
         // If not previously frozen, freeze the collateral for this bond
         if (freezCollateral[_id] == 0) {
             freezCollateral[_id] += 1;
+            liquidationFactor[_id] = bond[_id].collateral / bond[_id].amount;
         }
 
         // Calculate the per-token share of the collateral
-        uint collateralToLiquidate = bond[_id].collateral / bond[_id].amount;
+        //uint collateralToLiquidate = bond[_id].collateral / bond[_id].amount;
         // Compute liquidation fee on the portion being redeemed
         uint fee = _liquidationFee(
             bond[_id].issuer,
             bond[_id].tokenLoan,
-            (collateralToLiquidate * _amount)
+            (liquidationFactor[_id] * _amount)
         );
 
         // Update bond's collateral (subtract the portion plus fee)
-        bond[_id].collateral -= (collateralToLiquidate * _amount); // + fee;
+        bond[_id].collateral -= (liquidationFactor[_id] * _amount); // + fee;
 
         // Remove coupon entitlements and burn the redeemed bond tokens
         _upDateCouponSell(_id, _user, _amount);
@@ -1145,7 +1144,7 @@ function initialize(address _owner) public initializer {
         SafeERC20.safeTransfer(
             IERC20(bond[_id].tokenCollateral),
             _user,
-            (collateralToLiquidate * _amount) - fee
+            (liquidationFactor[_id] * _amount) - fee
         );
 
         // Emit event indicating collateral liquidation
@@ -1866,6 +1865,4 @@ function initialize(address _owner) public initializer {
             return veryLowPenalties;
         }
     }
-
-
 }

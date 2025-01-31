@@ -124,7 +124,6 @@ describe('Test Bond, stable version', () => {
 
             await expect(
                 bondContract.connect(issuer).createNewBond(
-                    issuer.address,
                     await mockDai.getAddress(),
                     sizeLoan,
                     interest,
@@ -957,6 +956,7 @@ describe('Test Bond, stable version', () => {
 
         //**  Liquidate rest of bond
         await expect(bondContract.connect(user2).claimLoan(1, 50)).to.emit(bondContract, "LiquitationCollateralBondExpired");
+
 
     })
     it("Iusser can withdraw collateral 15 days after repay all interests and bond", async () => {
@@ -2258,21 +2258,107 @@ describe('Test Bond, stable version', () => {
         await expect(downwardAuctionContract.connect(owner).withDrawBond(0)).to.emit(downwardAuctionContract, 'WithDrawBond')
         // il venditore puo ritirare i suoi soldi
         // cifra simbolica per ora
-  
+
 
         const freeBalanceOwnerAuctionAfter = await downwardAuctionContract.connect(user2).showUserBalanceFree(user1);
-     
+
 
 
         await expect(downwardAuctionContract.connect(user1).withdrawMoney(freeBalanceOwnerAuctionAfter)).be.emit(downwardAuctionContract, 'WithDrawMoney')
-        
-        
-        
+
+
+
 
         feesBalance = await downwardAuctionContract.connect(owner).showBalanceFee()
         //console.log(` queste sono le fee finali -> ${feesBalance.toString()}`)
         //? verificato il calcolo delle fee a mano
 
+    })
+
+
+
+    it("Bug in liquidation function?!?!?!?!? ", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockWETH.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+        await bondContract.connect(issuer).setApprovalForAll(launchBondContractAddress, true);
+        await expect(launchBondContract.connect(issuer).launchNewBond('1', '100')).to.emit(launchBondContract, 'IncrementBondInLaunch')
+
+        const sizeBond1 = ethers.parseUnits((100 * 50).toString());
+        await mockDai.connect(owner).transfer(user1, sizeBond1);
+        await mockDai.connect(owner).transfer(user2, sizeBond1);
+
+        await mockDai.connect(user1).approve(launchBondContractAddress, sizeBond1);
+        await mockDai.connect(user2).approve(launchBondContractAddress, sizeBond1);
+
+        await expect(launchBondContract.connect(user1).buyBond(1, 0, 50)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user1).withdrawBondBuy(1)
+
+        await expect(launchBondContract.connect(user2).buyBond(1, 0, 50)).to.emit(launchBondContract, 'BuyBond')
+        await launchBondContract.connect(user2).withdrawBondBuy(1)
+
+        // in next time over expiredBond
+        const dayInSecond = 86400;
+        await ethers.provider.send("evm_increaseTime", [dayInSecond * 40]);
+        await ethers.provider.send("evm_mine");
+
+        //**After  4 penalities the bond should liquidation  */
+
+        //** 1st penality
+        let BTCBalanceBeforeUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+        await expect(bondContract.connect(user1).claimCouponForUSer(1, 0)).to.emit(bondContract, "CouponClaimed");
+        let BTCBalanceAfterUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+
+        //** 2nd penality
+        let BTCBalanceBeforeUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        await expect(bondContract.connect(user2).claimCouponForUSer(1, 0)).to.emit(bondContract, "CouponClaimed");
+        let BTCBalanceAfterUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        expect(+BTCBalanceBeforeUser2.toString()).to.below(+BTCBalanceAfterUser2.toString())
+        expect(+BTCBalanceAfterUser1.toString()).to.below(+BTCBalanceAfterUser2.toString())
+
+        //** 3rd penality
+        BTCBalanceBeforeUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+        await expect(bondContract.connect(user1).claimCouponForUSer(1, 1)).to.emit(bondContract, "CouponClaimed");
+        BTCBalanceAfterUser1 = await mockBTC.connect(owner).balanceOf(user1.address);
+        expect(+BTCBalanceBeforeUser1.toString()).to.below(+BTCBalanceAfterUser1.toString())
+
+        //** 4nd penality
+        BTCBalanceBeforeUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        await expect(bondContract.connect(user2).claimCouponForUSer(1, 1)).to.emit(bondContract, "CouponClaimed");
+        BTCBalanceAfterUser2 = await mockBTC.connect(owner).balanceOf(user2.address);
+        expect(+BTCBalanceBeforeUser2.toString()).to.below(+BTCBalanceAfterUser2.toString())
+        expect(+BTCBalanceAfterUser1.toString()).to.below(+BTCBalanceAfterUser2.toString())
+
+
+        //**  In this case the bond is  completely liquidate and user can't claim coupon
+        await expect(bondContract.connect(user1).claimCouponForUSer(1, 2)).be.rejectedWith("This bond is expired or totally liquidated");
+
+        //**  In this case the bond is  completely liquidate and user can't claim coupon
+        await expect(bondContract.connect(user1).claimLoan(1, 50)).to.emit(bondContract, "LiquitationCollateralBondExpired");
+
+        //**  Liquidate rest of bond
+        await expect(bondContract.connect(user2).claimLoan(1, 50)).to.emit(bondContract, "LiquitationCollateralBondExpired");
+
+        const bondDetail = await bondContract.showDeatailBondForId(1);
+        //? Expect Collaterl is 0 after total liquidation bondDetail[8] is collateral balance
+        expect(bondDetail[8].toString()).be.eq('0')
     })
 
 });

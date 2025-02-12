@@ -3,6 +3,7 @@
   "devDependencies": {
     "@nomicfoundation/hardhat-ethers": "^3.0.8",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
+    "@nomicfoundation/hardhat-verify": "^2.0.12",
     "@openzeppelin/hardhat-upgrades": "^3.8.0",
     "ethers": "^6.13.4",
     "hardhat": "^2.22.17"
@@ -10,6 +11,7 @@
   "dependencies": {
     "@openzeppelin/contracts": "^5.0.2",
     "@thirdweb-dev/contracts": "^3.15.0",
-    "@uniswap/v3-core": "^1.0.1"
+    "@uniswap/v3-core": "^1.0.1",
+    "dotenv": "^16.4.7"
   }
 }

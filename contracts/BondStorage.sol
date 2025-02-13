@@ -38,7 +38,7 @@ contract BondStorage {
      * - score: a rating or “trust score” for the issuer, influencing fee rates and penalties.
      */
     struct ConditionOfFee {
-        uint[3] penalityForLiquidation;
+        uint16[3] penalityForLiquidation;
         uint score;
     }
 
@@ -57,20 +57,20 @@ contract BondStorage {
     address internal launcherContract;
     uint internal transfertFee;
     address internal WHET;
-    uint internal MAX_COUPONS;
+    uint8 internal MAX_COUPONS;
     address internal treasury;
     uint internal bondId;
-    uint internal COUPON_FEE = 5;
-    uint[4] internal LIQUIDATION_FEE = [5, 15, 30, 50];
+    uint16 internal COUPON_FEE = 5;
+    uint16[4] internal LIQUIDATION_FEE = [5, 15, 30, 50];
 
     // Case 1: new user or medium range
-    uint[3] internal mediumPenalties = [uint(100), uint(200), uint(400)];
-    // Case 2: high score (>1M)
-    uint[3] internal highPenalties = [uint(50), uint(100), uint(200)];
-    // Case 3: low score [500k, 700k)
-    uint[3] internal lowPenalties = [uint(200), uint(400), uint(600)];
-    // Case 4: very low score (<500k)
-    uint[3] internal veryLowPenalties = [uint(280), uint(450), uint(720)];
+    uint16[3] internal mediumPenalties = [uint16(100), uint16(200), uint16(400)];
+    // C16ase 2: high score (>1M)
+    uint16[3] internal highPenalties = [uint16(50), uint16(100), uint16(200)];
+    // C16ase 3: low score [500k, 700k)
+    uint16[3] internal lowPenalties = [uint16(200), uint16(400), uint16(600)];
+    // C16ase 4: very low score (<500k)
+    uint16[3] internal veryLowPenalties = [uint16(280), uint16(450), uint16(720)];
 
     /**
      * @dev Maps each address to its ConditionOfFee struct, defining penalties and score.
@@ -80,7 +80,7 @@ contract BondStorage {
     /**
      * @dev Maps a bond ID to the number of liquidation events that have occurred on that bond.
      */
-    mapping(uint => uint) internal numberOfLiquidations;
+    mapping(uint => uint8) internal numberOfLiquidations;
 
     /**
      * @dev Tracks the total supply of each bond (ERC1155) identified by its token ID.
@@ -119,7 +119,7 @@ contract BondStorage {
      * @dev claimedPercentage[bondId][address] tracks the percentage (out of 100) of
      *      reward points claimed by an address for a given bond.
      */
-    mapping(uint => mapping(address => uint)) internal claimedPercentage;
+    mapping(uint => mapping(address => uint8)) internal claimedPercentage;
 
     /**
      * @dev ecosistemAddress[address] marks whether an address belongs to the “ecosystem”

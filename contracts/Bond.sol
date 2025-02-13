@@ -203,7 +203,7 @@ function initialize(address _owner) public initializer {
      *      This function can only be called by the owner of the contract.
      * @param _MAX_COUPONS The new maximum number of coupons to be set.
      */
-    function setMAX_COUPONS(uint _MAX_COUPONS) external onlyOwner {
+    function setMAX_COUPONS(uint8 _MAX_COUPONS) external onlyOwner {
         MAX_COUPONS = _MAX_COUPONS;
     }
 
@@ -254,7 +254,7 @@ function initialize(address _owner) public initializer {
      * @param _fee The new coupon fee to be set. Must be greater than zero.
      * @notice Ensures that the fee is set to a valid value to prevent incorrect configurations.
      */
-    function setCOUPON_FEE(uint _fee) external onlyOwner {
+    function setCOUPON_FEE(uint16 _fee) external onlyOwner {
         require(_fee > 0, "Set a valid fee");
         COUPON_FEE = _fee;
     }
@@ -276,7 +276,10 @@ function initialize(address _owner) public initializer {
      * @notice This function can only be called by the owner of the contract.
      * @notice Reverts if the index is out of bounds or the value is invalid.
      */
-    function updateLiquidationFee(uint _index, uint _value) external onlyOwner {
+    function updateLiquidationFee(
+        uint _index,
+        uint16 _value
+    ) external onlyOwner {
         require(_index < LIQUIDATION_FEE.length, "Invalid index");
         require(_value > 0, "Value must be greater than 0");
         LIQUIDATION_FEE[_index] = _value;
@@ -288,7 +291,9 @@ function initialize(address _owner) public initializer {
      * @notice This function can only be called by the owner of the contract.
      * @notice The provided array must have exactly 4 elements.
      */
-    function updateLiquidationFees(uint[4] memory _newFees) external onlyOwner {
+    function updateLiquidationFees(
+        uint16[4] memory _newFees
+    ) external onlyOwner {
         LIQUIDATION_FEE = _newFees;
     }
 
@@ -302,7 +307,7 @@ function initialize(address _owner) public initializer {
      */
     function updatePenalties(
         uint category,
-        uint[3] memory newPenalties
+        uint16[3] memory newPenalties
     ) external onlyOwner {
         require(category >= 1 && category <= 4, "Invalid category");
         require(
@@ -535,6 +540,8 @@ function initialize(address _owner) public initializer {
             _expiredBond > _couponMaturity[_couponMaturity.length - 1],
             "Set correct expiry for this bond"
         );
+        require(_amount <= 1000000, "Amount exceeds max bond supply");
+
 
         // Update the issuer's score and charge an issuance fee
         _setScoreForUser(msg.sender);
@@ -680,6 +687,10 @@ function initialize(address _owner) public initializer {
         for (uint i = 0; i < bond[_id].couponMaturity.length; i++) {
             // Only remove coupon rights for coupons that haven't matured yet
             if (time < bond[_id].couponMaturity[i]) {
+                require(
+                    couponToClaim[_id][_user][i] >= qty,
+                    "Insufficient coupons"
+                );
                 couponToClaim[_id][_user][i] -= qty;
             }
         }
@@ -1306,13 +1317,17 @@ function initialize(address _owner) public initializer {
             (conditionOfFee[_user].score <= 1000000 &&
                 conditionOfFee[_user].score >= 700000)
         ) {
-            uint[3] memory penalties = [uint(100), uint(200), uint(400)];
+            uint16[3] memory penalties = [
+                uint16(100),
+                uint16(200),
+                uint16(400)
+            ];
             conditionOfFee[_user] = ConditionOfFee(penalties, 700100);
             emit ScoreUpdated(_user, 700100);
         }
         // Case 2: high score (>1M)
         else if (conditionOfFee[_user].score > 1000000) {
-            uint[3] memory penalties = [uint(50), uint(100), uint(200)];
+            uint16[3] memory penalties = [uint16(50), uint16(100), uint16(200)];
             conditionOfFee[_user].penalityForLiquidation = penalties;
             emit ScoreUpdated(_user, 100000); // Possibly set to 1,000,000 or another logic as needed
         }
@@ -1321,13 +1336,21 @@ function initialize(address _owner) public initializer {
             conditionOfFee[_user].score < 700000 &&
             conditionOfFee[_user].score >= 500000
         ) {
-            uint[3] memory penalties = [uint(200), uint(400), uint(600)];
+            uint16[3] memory penalties = [
+                uint16(200),
+                uint16(400),
+                uint16(600)
+            ];
             conditionOfFee[_user].penalityForLiquidation = penalties;
             emit ScoreUpdated(_user, 500000);
         }
         // Case 4: very low score (<500k)
         else if (conditionOfFee[_user].score < 500000) {
-            uint[3] memory penalties = [uint(280), uint(450), uint(720)];
+            uint16[3] memory penalties = [
+                uint16(280),
+                uint16(450),
+                uint16(720)
+            ];
             conditionOfFee[_user].penalityForLiquidation = penalties;
             emit ScoreUpdated(_user, 499999);
         }
@@ -1458,7 +1481,7 @@ function initialize(address _owner) public initializer {
             prizeScoreAlreadyClaim[_id][_issuer] += score;
             prizeScore[_id][_issuer] = 0;
             conditionOfFee[_issuer].score += score;
-            claimedPercentage[_id][_issuer] = 100; // 100% claimed
+            claimedPercentage[_id][_issuer] = uint8(100); // 100% claimed
             emit ScoreUpdated(_issuer, score);
 
             // 2) If the remaining supply is ≤ 25%, the issuer can claim up to a total of 75%
@@ -1466,7 +1489,7 @@ function initialize(address _owner) public initializer {
             _totalSupply[_id] <= bond[_id].amount / 4 &&
             claimedPercentage[_id][_issuer] < 75
         ) {
-            uint claimablePercentage = 75 - claimedPercentage[_id][_issuer];
+            uint8 claimablePercentage = 75 - claimedPercentage[_id][_issuer];
             uint score = (totalPoints * claimablePercentage) / 100;
             prizeScoreAlreadyClaim[_id][_issuer] += score;
             prizeScore[_id][_issuer] -= score;
@@ -1479,7 +1502,7 @@ function initialize(address _owner) public initializer {
             _totalSupply[_id] <= bond[_id].amount / 2 &&
             claimedPercentage[_id][_issuer] < 50
         ) {
-            uint claimablePercentage = 50 - claimedPercentage[_id][_issuer];
+            uint8 claimablePercentage = 50 - claimedPercentage[_id][_issuer];
             uint score = (totalPoints * claimablePercentage) / 100;
             prizeScoreAlreadyClaim[_id][_issuer] += score;
             prizeScore[_id][_issuer] -= score;
@@ -1571,7 +1594,7 @@ function initialize(address _owner) public initializer {
     function _updateBalanceContractForEmissionNewBond(
         address _tokenAddress,
         uint _amountCollateral,
-        uint _fee
+        uint16 _fee
     ) internal returns (uint) {
         // Calculate the fee portion of the collateral
         uint feeAmount = (_amountCollateral * _fee) / 1000;
@@ -1726,7 +1749,7 @@ function initialize(address _owner) public initializer {
             return false;
         }
         // Try calling totalSupply(), which all ERC20 contracts should implement.
-        try IERC20(_addr).totalSupply() returns (uint256) {
+        try IERC20(_addr).balanceOf(address(this)) returns (uint256) {
             return true;
         } catch {
             return false;
@@ -1840,7 +1863,7 @@ function initialize(address _owner) public initializer {
      * @return An array containing the current liquidation fees.
      * @notice This function provides visibility into the current liquidation fee structure.
      */
-    function showLiquidationFees() external view returns (uint[4] memory) {
+    function showLiquidationFees() external view returns (uint16[4] memory) {
         return LIQUIDATION_FEE;
     }
 
@@ -1852,7 +1875,7 @@ function initialize(address _owner) public initializer {
      */
     function viewPenalties(
         uint category
-    ) external view returns (uint[3] memory) {
+    ) external view returns (uint16[3] memory) {
         require(category >= 1 && category <= 4, "Invalid category");
 
         if (category == 1) {

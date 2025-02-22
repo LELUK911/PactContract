@@ -542,7 +542,6 @@ function initialize(address _owner) public initializer {
         );
         require(_amount <= 1000000, "Amount exceeds max bond supply");
 
-
         // Update the issuer's score and charge an issuance fee
         _setScoreForUser(msg.sender);
         uint fee = _emisionBondFee(msg.sender, _tokenCollateral, _collateral);
@@ -802,7 +801,24 @@ function initialize(address _owner) public initializer {
         address _issuer,
         uint _amount
     ) internal {
+        require(!depositIsClose[_id], "Deposit is Close");
+        if (maxInterestDeposit[_id] == 0) {
+            maxInterestDeposit[_id] =
+                (bond[_id].sizeLoan *
+                    (bond[_id].interest * bond[_id].couponMaturity.length)) *
+                _totalSupply[_id];
+        }
         require(_amount > 0, "Qta token Incorect");
+        require(
+            _amount <= maxInterestDeposit[_id],
+            "Cannot deposit more than allowed"
+        );
+        maxInterestDeposit[_id] -= _amount;
+
+        if (maxInterestDeposit[_id] == 0) {
+            depositIsClose[_id] = true;
+        }
+
         SafeERC20.safeTransferFrom(
             IERC20(bond[_id].tokenLoan),
             _issuer,
@@ -1730,6 +1746,43 @@ function initialize(address _owner) public initializer {
     }
 
     //? VIEW & PURE FUNCTION
+
+    /**
+     * @dev Calculates the maximum possible interest amount for a given bond.
+     * @param _id The bond ID for which the calculation is performed.
+     * @return maxQtaInterest The total maximum interest that can be generated.
+     *
+     * Formula:
+     * maxQtaInterest = (sizeLoan * (interest * number_of_coupons)) * totalSupply
+     *
+     * - `sizeLoan`: The loan amount for the bond.
+     * - `interest`: Interest paid per coupon.
+     * - `couponMaturity.length`: Total number of coupons.
+     * - `totalSupply`: Total supply of bond tokens (ERC1155).
+     *
+     * This function provides the upper limit of the total interest payout if all bond tokens are held and all coupons are claimed.
+     */
+    function getMaxQtaInterest(uint _id) public view returns (uint) {
+        uint maxQtaInterest = (bond[_id].sizeLoan *
+            (bond[_id].interest * bond[_id].couponMaturity.length)) *
+            _totalSupply[_id];
+        return maxQtaInterest;
+    }
+
+    /**
+     * @dev Returns the remaining quantity of tokens that can still be deposited for interest payments.
+     *
+     * This function is particularly useful after the first deposit of interest tokens,
+     * as the `maxInterestDeposit[_id]` value is only initialized at that moment.
+     * Before the first deposit, calling this function will return `0` since the value
+     * has not yet been calculated.
+     *
+     * @param _id The ID of the bond for which the remaining interest deposit is queried.
+     * @return The remaining amount of tokens that can still be deposited for interest.
+     */
+    function getMissQtaInterest(uint _id) public view returns (uint) {
+        return maxInterestDeposit[_id];
+    }
 
     /**
      * @dev Checks if an address is non-zero. Returns true if valid, false otherwise.

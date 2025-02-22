@@ -64,13 +64,21 @@ contract BondStorage {
     uint16[4] internal LIQUIDATION_FEE = [5, 15, 30, 50];
 
     // Case 1: new user or medium range
-    uint16[3] internal mediumPenalties = [uint16(100), uint16(200), uint16(400)];
+    uint16[3] internal mediumPenalties = [
+        uint16(100),
+        uint16(200),
+        uint16(400)
+    ];
     // C16ase 2: high score (>1M)
     uint16[3] internal highPenalties = [uint16(50), uint16(100), uint16(200)];
     // C16ase 3: low score [500k, 700k)
     uint16[3] internal lowPenalties = [uint16(200), uint16(400), uint16(600)];
     // C16ase 4: very low score (<500k)
-    uint16[3] internal veryLowPenalties = [uint16(280), uint16(450), uint16(720)];
+    uint16[3] internal veryLowPenalties = [
+        uint16(280),
+        uint16(450),
+        uint16(720)
+    ];
 
     /**
      * @dev Maps each address to its ConditionOfFee struct, defining penalties and score.
@@ -140,5 +148,37 @@ contract BondStorage {
      */
     mapping(address => uint) internal balanceContractFeesForToken;
 
+    /**
+     * @dev Tracks the per-bond collateral liquidation factor.
+     *
+     * This mapping stores the calculated collateral amount per token unit
+     * in case of liquidation. It is set only when the first liquidation
+     * event occurs for a bond and remains fixed for subsequent liquidations.
+     *
+     * Key Use Case:
+     * - Helps determine how much collateral each bond unit is worth during liquidation.
+     */
     mapping(uint => uint) internal liquidationFactor;
+
+    /**
+     * @dev Stores the maximum allowable interest deposit for each bond.
+     *
+     * This value is calculated only after the first deposit of interest tokens
+     * and represents the total amount that can be deposited throughout the bond's lifecycle.
+     *
+     * Key Use Case:
+     * - Prevents over-depositing beyond the required interest payments.
+     */
+    mapping(uint => uint) internal maxInterestDeposit;
+
+    /**
+     * @dev Indicates whether the interest deposit window for a bond is closed.
+     *
+     * This flag is set to `true` once the maximum required interest deposit has been reached,
+     * ensuring that no further deposits can be made.
+     *
+     * Key Use Case:
+     * - Enforces that issuers only deposit the exact interest required and prevents excess deposits.
+     */
+    mapping(uint => bool) internal depositIsClose;
 }

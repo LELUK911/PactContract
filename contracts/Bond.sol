@@ -804,7 +804,7 @@ function initialize(address _owner) public initializer {
         require(!depositIsClose[_id], "Deposit is Close");
         if (maxInterestDeposit[_id] == 0) {
             maxInterestDeposit[_id] =
-                (bond[_id].sizeLoan *
+                (bond[_id].sizeLoan +
                     (bond[_id].interest * bond[_id].couponMaturity.length)) *
                 _totalSupply[_id];
         }
@@ -813,7 +813,6 @@ function initialize(address _owner) public initializer {
             _amount <= maxInterestDeposit[_id],
             "Cannot deposit more than allowed"
         );
-        maxInterestDeposit[_id] -= _amount;
 
         if (maxInterestDeposit[_id] == 0) {
             depositIsClose[_id] = true;
@@ -827,6 +826,7 @@ function initialize(address _owner) public initializer {
         );
         bond[_id].balancLoanRepay += _amount;
         emit InterestDeposited(_issuer, _id, _amount);
+        maxInterestDeposit[_id] -= _amount;
     }
 
     /**
@@ -1763,7 +1763,7 @@ function initialize(address _owner) public initializer {
      * This function provides the upper limit of the total interest payout if all bond tokens are held and all coupons are claimed.
      */
     function getMaxQtaInterest(uint _id) public view returns (uint) {
-        uint maxQtaInterest = (bond[_id].sizeLoan *
+        uint maxQtaInterest = (bond[_id].sizeLoan +
             (bond[_id].interest * bond[_id].couponMaturity.length)) *
             _totalSupply[_id];
         return maxQtaInterest;

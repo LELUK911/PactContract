@@ -2277,7 +2277,7 @@ describe('Test Bond, stable version', () => {
 
 
 
-    it("Bug in liquidation function?!?!?!?!? ", async () => {
+    it("Check liquidation function ", async () => {
         //? Approve spending
         await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
         await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
@@ -2359,6 +2359,47 @@ describe('Test Bond, stable version', () => {
         const bondDetail = await bondContract.showDeatailBondForId(1);
         //? Expect Collaterl is 0 after total liquidation bondDetail[8] is collateral balance
         expect(bondDetail[8].toString()).be.eq('0')
+    })
+
+
+    it("Control deposit interest Limit ", async () => {
+        //? Approve spending
+        await mockBTC.connect(issuer).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockDai.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+        await mockWETH.connect(owner).approve(bondContractAddress, ethers.parseUnits('999999999'))
+
+        //? Create new Bond ( in this case all equal)
+        const currentBlock = await ethers.provider.getBlock("latest");
+        const currentTimestamp = currentBlock.timestamp;
+        const couponMaturity = [
+            currentTimestamp + (86400 * 10),
+            currentTimestamp + (86400 * 20),
+            currentTimestamp + (86400 * 30),
+            currentTimestamp + (86400 * 40),
+            currentTimestamp + (86400 * 50),
+            currentTimestamp + (86400 * 60),
+
+        ];
+        const expiredBond = currentTimestamp + (86400 * 90);
+        await newBondFunction('1000', '10', couponMaturity, expiredBond, '4', issuer, '100') // ID 0
+        await newBondFunction('100', '10', couponMaturity, expiredBond, '10', issuer, '100') // ID 1
+
+
+        const sizeBond1 = ethers.parseUnits(((100 + (10 * 4))*100).toString());
+        await mockDai.connect(owner).transfer(user1, sizeBond1);
+        await mockDai.connect(owner).transfer(user1, sizeBond1);
+        await mockDai.connect(issuer).approve(bondContractAddress, sizeBond1)
+        await mockDai.connect(issuer).approve(bondContractAddress, sizeBond1)
+
+        await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeBond1)).to.emit(bondContract, 'InterestDeposited')
+
+        await expect(bondContract.connect(issuer).depositTokenForInterest(1, sizeBond1)).be.rejectedWith('Cannot deposit more than allowed')
+
+
+
+
+
+
     })
 
 });

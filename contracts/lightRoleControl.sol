@@ -5,7 +5,7 @@ contract LightRoleControl {
     address private accountant;
     address private pendingAccountant;
 
-    event AdminshipTransferred(address indexed previousAdmin, address indexed newAdmin);
+    event AccountantshipTransferred(address indexed previousAdmin, address indexed accountant);
 
 
     constructor(address _accountant) {
@@ -25,7 +25,7 @@ contract LightRoleControl {
         require(msg.sender == pendingAccountant, "Only pendingAccountant can call this function");
         accountant = pendingAccountant;
         pendingAccountant = address(0);
-        emit AdminshipTransferred(accountant, pendingAccountant);
+        emit AccountantshipTransferred(accountant, pendingAccountant);
     }
 
     function getAccountant() public view returns (address) {

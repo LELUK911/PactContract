@@ -6,7 +6,6 @@ pragma solidity ^0.8.24;
  * @dev Storage structure for the UpwardAuction contract, containing all variables and data mappings necessary for the auction system.
  */
 contract UpwardAuctionStorage {
-
     // Address of the ERC1155 bond contract.
     address internal bondContract;
 
@@ -86,4 +85,8 @@ contract UpwardAuctionStorage {
 
     // Mapping to track the last bid time for each user and auction (used for cooldown enforcement).
     mapping(address => mapping(uint => uint)) internal lastPotTime;
+
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant ACCOUNTANT_ROLE = keccak256("ACCOUNTANT_ROLE");
+address internal treasury;
 }

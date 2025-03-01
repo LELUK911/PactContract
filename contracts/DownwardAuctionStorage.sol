@@ -16,6 +16,8 @@ contract DownwardAuctionStorage {
     // Cooldown period to prevent spamming of operations.
     uint internal coolDown;
 
+    address internal treasury;
+
     // Structure to represent an auction.
     struct Auction {
         address owner;             // Owner of the auction.
@@ -60,5 +62,8 @@ contract DownwardAuctionStorage {
     mapping(address => uint) lockBalance;
     // Mapping to track the timestamp of the last bid made by a user on a specific auction.
     mapping(address => mapping(uint => uint)) internal lastPotTime;
+
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant ACCOUNTANT_ROLE = keccak256("ACCOUNTANT_ROLE");
 
 }

@@ -54,7 +54,10 @@ describe('Test Bond, stable version', () => {
             daiAddress,
             ethers.parseUnits('1'),//fixed Fee 1$
             ethers.parseUnits('1000'),// price Threshold 1000$
-            100 //dinamicfee 1%
+            100, //dinamicfee 1%
+            owner.address,
+            accountant.address,
+            owner.address,
         )
         await upwardAuctionContract.waitForDeployment()
         upwardAuctionContractAddress = await upwardAuctionContract.getAddress()
@@ -78,7 +81,11 @@ describe('Test Bond, stable version', () => {
             daiAddress,
             ethers.parseUnits('1'),//fixed Fee 1$
             ethers.parseUnits('1000'),// price Threshold 1000$
-            100 //dinamicfee 1%
+            100, //dinamicfee 1%
+            owner.address,
+            accountant.address,
+            owner.address,
+
         )
         await downwardAuctionContract.waitForDeployment()
         downwardAuctionContractAddress = await downwardAuctionContract.getAddress()
@@ -1560,7 +1567,7 @@ describe('Test Bond, stable version', () => {
         feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq(ethers.parseUnits('2200')) //?SI
         //* PRELEVIAMO LE FEE GENERATE CON LE PUNTATE
-        await upwardAuctionContract.connect(owner).withdrawFees()
+        await upwardAuctionContract.connect(accountant).withdrawFees()
         feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq(ethers.parseUnits('0'))
         //! ORA CONTROLLIAMO LE FEE SUL VENDITORE
@@ -1912,7 +1919,7 @@ describe('Test Bond, stable version', () => {
         //This pot is lower then tolerated Discount
 
         //? fee verificate e sono l'1% 
-        await downwardAuctionContract.connect(owner).withdrawFees()
+        await downwardAuctionContract.connect(accountant).withdrawFees()
 
 
 
@@ -2079,7 +2086,7 @@ describe('Test Bond, stable version', () => {
         feesBalance = await downwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq('1910900000000000000000') //?SI
         //* PRELEVIAMO LE FEE GENERATE CON LE PUNTATE
-        await downwardAuctionContract.connect(owner).withdrawFees()
+        await downwardAuctionContract.connect(accountant).withdrawFees()
         feesBalance = await downwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq(ethers.parseUnits('0'))
         //! ORA CONTROLLIAMO LE FEE SUL VENDITORE

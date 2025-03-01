@@ -22,13 +22,12 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 // Provides protection against reentrancy attacks by ensuring that a function cannot be re-entered
 // while it is already executing. This is critical for securing contract logic that handles external calls.
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-// Implements basic ownership functionality, allowing only the contract owner to execute specific functions.
-// Useful for managing privileged actions such as updating configurations or withdrawing fees.
-
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
 // Defines the interface for contracts that are intended to handle the receipt of ERC1155 tokens.
 // This is essential for contracts that need to safely receive or manage ERC1155 token transfers.
+
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+// Interface for contracts that handle ERC1155 token receipts.
 
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 // Implements the ERC165 standard for interface detection. This allows the contract to declare which
@@ -46,13 +45,13 @@ import {UpwardAuctionStorage} from "./UpwardAuctionStorage.sol";
 //import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 //import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {console} from "hardhat/console.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
 contract UpwardAuction is
     UpwardAuctionStorage,
     Pausable, // Allows the contract to be paused and unpaused by the owner.
     ReentrancyGuard, // Prevents reentrancy attacks in critical functions.
-    Ownable
+    AccessControl // Provides role-based access control for contract functions.
 {
     /**
      * @dev Emitted when a new auction is created.
@@ -141,14 +140,22 @@ contract UpwardAuction is
         address _money,
         uint _fixedFee,
         uint _priceThreshold,
-        uint _dinamicFee
-    ) Ownable(msg.sender) {
+        uint _dinamicFee,
+        address _treasury,
+        address _accountant,
+        address _admin
+    ) AccessControl() {
         bondContract = _bondContrac;
         money = _money;
 
         feeSystem.fixedFee = _fixedFee;
         feeSystem.priceThreshold = _priceThreshold;
         feeSystem.dinamicFee = _dinamicFee;
+        treasury = _treasury;
+
+        _grantRole(AccessControl.DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(ACCOUNTANT_ROLE, _accountant);
+        _grantRole(OWNER_ROLE, msg.sender);
     }
 
     /*
@@ -185,7 +192,7 @@ contract UpwardAuction is
      */
     function setNewBondAddress(
         address _bondContrac
-    ) external onlyOwner nonReentrant {
+    ) external onlyRole(OWNER_ROLE) nonReentrant {
         require(_bondContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
             _bondContrac != bondContract,
@@ -210,7 +217,7 @@ contract UpwardAuction is
         uint _fixedFee,
         uint _priceThreshold,
         uint _dinamicFee
-    ) external onlyOwner nonReentrant {
+    ) external onlyRole(OWNER_ROLE) nonReentrant {
         require(_dinamicFee <= 10000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
@@ -223,7 +230,9 @@ contract UpwardAuction is
      * @param _money The address of the new money token (e.g., USDC, WETH).
      * @notice Ensure the provided address is valid and not the zero address before calling this function.
      */
-    function setNewMoneyToken(address _money) external onlyOwner nonReentrant {
+    function setNewMoneyToken(
+        address _money
+    ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
         money = _money; // Updates the money token address.
     }
@@ -238,7 +247,7 @@ contract UpwardAuction is
     function setFeeSeller(
         uint[] memory _echelons,
         uint[] memory _fees
-    ) external virtual onlyOwner nonReentrant {
+    ) external virtual onlyRole(OWNER_ROLE) nonReentrant {
         require(
             _echelons.length == _fees.length,
             "Echelons and fees length mismatch"
@@ -367,7 +376,7 @@ contract UpwardAuction is
      * @param _coolDown The cooldown period to set, in seconds.
      * @notice The cooldown is used to prevent rapid consecutive actions from the same user.
      */
-    function setCoolDown(uint _coolDown) external virtual onlyOwner {
+    function setCoolDown(uint _coolDown) external virtual onlyRole(OWNER_ROLE) {
         coolDown = _coolDown;
     }
 
@@ -377,12 +386,12 @@ contract UpwardAuction is
      * @notice Emits a `FeesWithdrawn` event with the withdrawn amount and timestamp.
      * Require The contract must have a positive balance of fees to withdraw.
      */
-    function withdrawFees() external virtual onlyOwner {
+    function withdrawFees() external virtual onlyRole(ACCOUNTANT_ROLE) {
         uint amount = contractBalance;
         require(amount > 0, "No fees available to withdraw"); // Ensure there are fees to withdraw
         contractBalance = 0; // Reset the contract balance to zero
-        SafeERC20.safeTransfer(IERC20(money), owner(), amount); // Transfer the fees to the owner
-        emit FeesWithdrawn(owner(), amount, block.timestamp); // Emit event for transparency
+        SafeERC20.safeTransfer(IERC20(money), treasury, amount); // Transfer the fees to the owner
+        emit FeesWithdrawn(treasury, amount, block.timestamp); // Emit event for transparency
     }
 
     /**
@@ -597,7 +606,7 @@ contract UpwardAuction is
         require(
             _owner == auctions[_index].owner ||
                 _owner == auctions[_index].player ||
-                _owner == owner(), // Allow only the owner, player, or contract owner
+                hasRole(OWNER_ROLE,_owner), // Allow only the owner, player, or contract owner
             "Not Owner"
         );
         require(auctions[_index].open == true, "This auction already close"); // Ensure the auction is still open
@@ -838,5 +847,10 @@ contract UpwardAuction is
      */
     function showBondContractAddress() public view returns (address) {
         return bondContract;
+    }
+
+    function setTreasury(address _treasury) external onlyRole(ACCOUNTANT_ROLE) {
+        require(_treasury != address(0), "Treasury address cannot be zero");
+        treasury = _treasury;
     }
 }

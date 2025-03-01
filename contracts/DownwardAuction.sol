@@ -19,10 +19,8 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 // Protects the contract against reentrancy attacks by preventing recursive calls to certain functions.
 
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-// Provides ownership management, enabling the contract owner to perform privileged operations.
-
 import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 // Interface for contracts that handle ERC1155 token receipts.
 
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
@@ -34,9 +32,8 @@ import "./interface/Ibond.sol";
 import {DownwardAuctionStorage} from "./DownwardAuctionStorage.sol";
 // Storage contract that contains the state variables and mappings required for the DownwardAuction system.
 
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {FullMath} from "./library/FullMath.sol";
-
-import {console} from "hardhat/console.sol";
 
 /**
  * @title DownwardAuction
@@ -48,9 +45,49 @@ contract DownwardAuction is
     ERC165, // ERC165 standard for interface detection.
     Pausable, // Provides mechanisms to pause and resume contract functions.
     ReentrancyGuard, // Protects against reentrancy attacks.
-    Ownable, // Ensures only the owner can perform certain actions.
-    IERC1155Receiver // Handles the receipt of ERC1155 tokens.
+    IERC1155Receiver, // Handles the receipt of ERC1155 tokens.
+    AccessControl // Role-based access control for contract functions.
 {
+    constructor(
+        address _bondContrac,
+        address _money,
+        uint _fixedFee,
+        uint _priceThreshold,
+        uint _dinamicFee,
+        address _treasury,
+        address _accountant,
+        address _admin
+    )  AccessControl() {
+        // Set the address of the ERC1155 bond contract
+        bondContract = _bondContrac;
+
+        // Set the address of the ERC20 token used as currency
+        money = _money;
+
+        // Initialize the fee system parameters
+        feeSystem.fixedFee = _fixedFee;
+        feeSystem.priceThreshold = _priceThreshold;
+        feeSystem.dinamicFee = _dinamicFee;
+        treasury = _treasury;
+
+        _grantRole(AccessControl.DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(ACCOUNTANT_ROLE, _accountant);
+        _grantRole(OWNER_ROLE, msg.sender);
+    }
+  
+
+    function supportsInterface(
+        bytes4 interfaceId
+    )
+        public
+        view
+        virtual
+        override(ERC165, AccessControl, IERC165)
+        returns (bool)
+    {
+        return super.supportsInterface(interfaceId);
+    }
+
     /**
      * @dev Event emitted when a new auction is created.
      * @param _owner The address of the auction creator.
@@ -162,35 +199,6 @@ contract DownwardAuction is
     }
 
     /**
-     * @dev Constructor for initializing the DownwardAuction contract.
-     * @param _bondContrac The address of the ERC1155 bond contract associated with this auction.
-     * @param _money The address of the ERC20 token used as the auction's currency (e.g., WETH or USDC).
-     * @param _fixedFee The fixed fee amount applied to auction transactions below the price threshold.
-     * @param _priceThreshold The price threshold above which a dynamic fee is applied.
-     * @param _dinamicFee The dynamic fee percentage (in basis points) applied to auction transactions above the price threshold.
-     * @notice This constructor initializes the bond contract, the auction currency, and the fee system.
-     *         It also calls the `Ownable` constructor to set the deployer as the initial owner.
-     */
-    constructor(
-        address _bondContrac,
-        address _money,
-        uint _fixedFee,
-        uint _priceThreshold,
-        uint _dinamicFee
-    ) Ownable(msg.sender) {
-        // Set the address of the ERC1155 bond contract
-        bondContract = _bondContrac;
-
-        // Set the address of the ERC20 token used as currency
-        money = _money;
-
-        // Initialize the fee system parameters
-        feeSystem.fixedFee = _fixedFee;
-        feeSystem.priceThreshold = _priceThreshold;
-        feeSystem.dinamicFee = _dinamicFee;
-    }
-
-    /**
      * @dev Updates the address of the ERC1155 bond contract.
      * @param _bondContrac The new address of the bond contract.
      * @notice Only the owner of the contract can execute this function.
@@ -203,7 +211,7 @@ contract DownwardAuction is
      */
     function setNewBondAddress(
         address _bondContrac
-    ) external onlyOwner nonReentrant {
+    ) external onlyRole(OWNER_ROLE) nonReentrant {
         require(_bondContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
             _bondContrac != bondContract,
@@ -222,7 +230,9 @@ contract DownwardAuction is
      * @param _money The address of the new money token (e.g., USDC, WETH).
      * @notice Ensure the provided address is valid and not the zero address before calling this function.
      */
-    function setNewMoneyToken(address _money) external onlyOwner nonReentrant {
+    function setNewMoneyToken(
+        address _money
+    ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
         money = _money; // Updates the money token address.
     }
@@ -239,7 +249,7 @@ contract DownwardAuction is
         uint _fixedFee,
         uint _priceThreshold,
         uint _dinamicFee
-    ) external onlyOwner nonReentrant {
+    ) external onlyRole(OWNER_ROLE) nonReentrant {
         require(_dinamicFee <= 10000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
@@ -256,7 +266,7 @@ contract DownwardAuction is
     function setFeeSeller(
         uint[] memory _echelons,
         uint[] memory _fees
-    ) external virtual onlyOwner {
+    ) external virtual onlyRole(OWNER_ROLE) {
         feeSeller.echelons = _echelons; // Set the price thresholds
         feeSeller.fees = _fees; // Set the corresponding fees
     }
@@ -384,7 +394,7 @@ contract DownwardAuction is
      * @param _coolDown The new cooldown period in seconds.
      * @notice Only the contract owner can update this value.
      */
-    function setCoolDown(uint _coolDown) external virtual onlyOwner {
+    function setCoolDown(uint _coolDown) external virtual onlyRole(OWNER_ROLE) {
         coolDown = _coolDown;
     }
 
@@ -393,10 +403,10 @@ contract DownwardAuction is
      * @notice Only the contract owner can withdraw the fees.
      * @notice This function transfers all available fees in the contract balance to the owner's address.
      */
-    function withdrawFees() external virtual onlyOwner {
+    function withdrawFees() external virtual onlyRole(ACCOUNTANT_ROLE) {
         uint amount = contractBalance; // Get the current contract balance
         contractBalance = 0; // Reset the contract balance to zero
-        SafeERC20.safeTransfer(IERC20(money), owner(), amount); // Transfer fees to the owner
+        SafeERC20.safeTransfer(IERC20(money), treasury, amount); // Transfer fees to the owner
     }
 
     /**
@@ -722,7 +732,7 @@ contract DownwardAuction is
         require(
             _owner == auctions[_index].owner ||
                 _owner == auctions[_index].player ||
-                _owner == owner(), // Allows the contract owner to force-close the auction to collect fees.
+                hasRole(OWNER_ROLE,_owner), // Allows the contract owner to force-close the auction to collect fees.
             "Not Owner"
         );
         require(auctions[_index].open == true, "This auction already closed");
@@ -762,7 +772,7 @@ contract DownwardAuction is
         // Adjust the balance and locked funds of the participants
         balanceUser[newOwner] -= initialPot;
         _updateLockBalance(newOwner, initialPot, false); // Unlock funds for the new owner
- 
+
         balanceUser[oldOwner] += pot;
     }
 
@@ -1070,5 +1080,10 @@ contract DownwardAuction is
      */
     function showBondContractAddress() public view returns (address) {
         return bondContract;
+    }
+
+    function setTreasury(address _treasury) external onlyRole(ACCOUNTANT_ROLE) {
+        require(_treasury != address(0), "Treasury address cannot be zero");
+        treasury = _treasury;
     }
 }

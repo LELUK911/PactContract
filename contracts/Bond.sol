@@ -18,6 +18,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {TimeManagment} from "./library/TimeManagement.sol";
+import {LightRoleControl} from "./lightRoleControl.sol";
 import {BondStorage} from "./BondStorage.sol";
 
 //import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
@@ -26,14 +27,13 @@ import {BondStorage} from "./BondStorage.sol";
 //import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 //import {ERC1155Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol';
 
-import {console} from "hardhat/console.sol";
-
 contract BondContract is
     BondStorage,
     ERC1155,
     Pausable,
     ReentrancyGuard,
-    Ownable
+    Ownable,
+    LightRoleControl
 {
     /**
      * @dev Emitted when a single safe transfer occurs (part of the custom logic).
@@ -161,14 +161,42 @@ contract BondContract is
     }
 
     /**
+     * @dev Ensures that the provided address is valid.
+     *      The address must not be the zero address (address(0)),
+     *      which is commonly used as an uninitialized or invalid address.
+     *
+     * @param _address The address to validate.
+     * @notice If `_address` is `address(0)`, the transaction will revert with "set correct Address".
+     */
+    modifier correctAddress(address _address) {
+        require(_address != address(0), "set correct Address");
+        _;
+    }
+
+    /**
+     * @dev Ensures that the provided category value is valid.
+     *      The valid categories are:
+     *        - 1: mediumPenalties
+     *        - 2: highPenalties
+     *        - 3: lowPenalties
+     *        - 4: veryLowPenalties
+     *      Any other value will revert with an "Invalid category" error.
+     *
+     * @param category The category to validate.
+     */
+    modifier invalidCategory(uint category) {
+        require(category >= 1 && category <= 4, "Invalid category");
+        _;
+    }
+
+    /**
      * @dev Constructor sets initial state:
      * - Assigns the contract owner using `Ownable(_owner)`.
      * - Initializes the ERC1155 base URI as an empty string (can be overridden later).
      * - Sets the initial bond counter (`bondId`) to 0.
      */
 
-    constructor(address _owner) Ownable(_owner) ERC1155("") {
-        bondId = 0;
+    constructor(address _owner ,address _accountant) Ownable(_owner) LightRoleControl(_accountant) ERC1155("") {
         MAX_COUPONS = 6;
     }
 
@@ -231,11 +259,12 @@ function initialize(address _owner) public initializer {
     /**
      * @dev Sets the launcher contract address where the first bond transfer should be directed.
      *      Must not be the zero address.
-     * @param _contract The address of the launcher contract.
+     * @param _address The address of the launcher contract.
      */
-    function setlauncherContract(address _contract) external onlyOwner {
-        require(_contract != address(0), "set correct Address");
-        launcherContract = _contract;
+    function setlauncherContract(
+        address _address
+    ) external onlyOwner correctAddress(_address) {
+        launcherContract = _address;
     }
 
     /**
@@ -243,8 +272,9 @@ function initialize(address _owner) public initializer {
      *      Must not be the zero address.
      * @param _address The WETH contract address.
      */
-    function setWETHaddress(address _address) external onlyOwner {
-        require(_address != address(0), "set correct Address");
+    function setWETHaddress(
+        address _address
+    ) external onlyOwner correctAddress(_address) {
         WHET = _address;
     }
 
@@ -264,8 +294,9 @@ function initialize(address _owner) public initializer {
      *      Must not be the zero address.
      * @param _address The treasury contract address.
      */
-    function setTreasuryAddress(address _address) external onlyOwner {
-        require(_address != address(0), "set correct Address");
+    function setTreasuryAddress(
+        address _address
+    ) external onlyAccountant correctAddress(_address) {
         treasury = _address;
     }
 
@@ -308,8 +339,7 @@ function initialize(address _owner) public initializer {
     function updatePenalties(
         uint category,
         uint16[3] memory newPenalties
-    ) external onlyOwner {
-        require(category >= 1 && category <= 4, "Invalid category");
+    ) external onlyOwner invalidCategory(category) {
         require(
             newPenalties.length == 3,
             "Array must contain exactly 3 values"
@@ -337,7 +367,7 @@ function initialize(address _owner) public initializer {
      *
      * @param _tokenAddress The ERC20 token being withdrawn.
      */
-    function withdrawContractBalance(address _tokenAddress) external onlyOwner {
+    function withdrawContractBalance(address _tokenAddress) external onlyAccountant {
         uint balance = balanceContractFeesForToken[_tokenAddress];
         balanceContractFeesForToken[_tokenAddress] = 0;
         SafeERC20.safeTransfer(IERC20(_tokenAddress), treasury, balance);
@@ -372,8 +402,8 @@ function initialize(address _owner) public initializer {
         uint256 id,
         uint256 amount,
         bytes memory data
-    ) public override whenNotPaused nonReentrant {
-        require(to != address(0), "ERC1155: transfer to the zero address");
+    ) public override whenNotPaused nonReentrant correctAddress(to) {
+        //require(to != address(0), "ERC1155: transfer to the zero address");
 
         // If this bond is flagged for the next transfer to go to launcher, enforce that
         if (firstTransfer[id]) {
@@ -432,12 +462,12 @@ function initialize(address _owner) public initializer {
         uint256[] memory ids,
         uint256[] memory amounts,
         bytes memory data
-    ) public override whenNotPaused nonReentrant {
+    ) public override whenNotPaused nonReentrant correctAddress(to) {
         require(
             ids.length == amounts.length,
             "ERC1155: ids and amounts length mismatch"
         );
-        require(to != address(0), "ERC1155: transfer to the zero address");
+        //require(to != address(0), "ERC1155: transfer to the zero address");
 
         // If both addresses are outside the ecosystem, charge a fee for each bond ID
         if (!ecosistemAddress[from] && !ecosistemAddress[to]) {
@@ -479,6 +509,14 @@ function initialize(address _owner) public initializer {
         emit SafeBatchTransferFrom(from, to, ids, amounts);
     }
 
+
+
+
+    modifier correctAmount(uint _amount){
+        require(_amount > 0, "set correct amount for variables");
+        _;
+    }
+
     /**
      * @dev Creates a new bond, verifying key parameters and locking collateral.
      *      1) Checks the validity of `_tokenLoan` (must look like an ERC20).
@@ -510,8 +548,8 @@ function initialize(address _owner) public initializer {
         address _tokenLoan,
         uint _sizeLoan,
         uint _interest,
-        uint[] memory _couponMaturity,
-        uint _expiredBond,
+        uint64[] memory _couponMaturity,
+        uint64 _expiredBond,
         address _tokenCollateral,
         uint _collateral,
         uint _amount,
@@ -585,7 +623,7 @@ function initialize(address _owner) public initializer {
      */
     function claimCouponForUSer(
         uint _id,
-        uint _indexCoupon
+        uint8 _indexCoupon
     ) external whenNotPaused nonReentrant {
         _claimCoupon(_id, msg.sender, _indexCoupon);
     }
@@ -641,7 +679,7 @@ function initialize(address _owner) public initializer {
     function claimScorePoint(
         uint _id
     ) external _onlyIssuer(_id) whenNotPaused nonReentrant {
-        require(bond[_id].expiredBond <= block.timestamp, "Bond isn't Expired");
+        require(bond[_id].expiredBond <= uint64(block.timestamp), "Bond isn't Expired");
         _claimScorePoint(_id, msg.sender);
     }
 
@@ -664,8 +702,8 @@ function initialize(address _owner) public initializer {
      * @param qty   The quantity of bond tokens being acquired.
      */
     function _upDateCouponBuy(uint _id, address _user, uint qty) internal {
-        uint time = block.timestamp;
-        for (uint i = 0; i < bond[_id].couponMaturity.length; i++) {
+        uint64 time = uint64(block.timestamp);
+        for (uint8 i = 0; i < bond[_id].couponMaturity.length; i++) {
             // Only grant coupon rights for coupons that haven't reached maturity yet
             if (time < bond[_id].couponMaturity[i]) {
                 couponToClaim[_id][_user][i] += qty;
@@ -682,7 +720,7 @@ function initialize(address _owner) public initializer {
      * @param qty   The quantity of bond tokens being transferred away.
      */
     function _upDateCouponSell(uint _id, address _user, uint qty) internal {
-        uint time = block.timestamp;
+        uint64 time = uint64(block.timestamp);
         for (uint i = 0; i < bond[_id].couponMaturity.length; i++) {
             // Only remove coupon rights for coupons that haven't matured yet
             if (time < bond[_id].couponMaturity[i]) {
@@ -722,8 +760,8 @@ function initialize(address _owner) public initializer {
         address _tokenLoan,
         uint _sizeLoan,
         uint _interest,
-        uint[] memory _couponMaturity,
-        uint _expiredBond,
+        uint64[] memory _couponMaturity,
+        uint64 _expiredBond,
         address _tokenCollateral,
         uint _collateral,
         uint _balancLoanRepay,
@@ -776,8 +814,8 @@ function initialize(address _owner) public initializer {
         address _issuer,
         address _tokenCollateral,
         uint _amount
-    ) internal {
-        require(_amount > 0, "Qta token Incorect");
+    ) internal  correctAmount(_amount){
+        //require(_amount > 0, "Qta token Incorect");
         SafeERC20.safeTransferFrom(
             IERC20(_tokenCollateral),
             _issuer,
@@ -800,15 +838,13 @@ function initialize(address _owner) public initializer {
         uint _id,
         address _issuer,
         uint _amount
-    ) internal {
+    ) internal correctAmount(_amount){
         require(!depositIsClose[_id], "Deposit is Close");
         if (maxInterestDeposit[_id] == 0) {
-            maxInterestDeposit[_id] =
-                (bond[_id].sizeLoan +
-                    (bond[_id].interest * bond[_id].couponMaturity.length)) *
-                _totalSupply[_id];
-        }
-        require(_amount > 0, "Qta token Incorect");
+            Bond storage b = bond[_id]; 
+            uint256 interestTotal = b.interest * b.couponMaturity.length; 
+            maxInterestDeposit[_id] = (b.sizeLoan + interestTotal) * _totalSupply[_id];
+        }   
         require(
             _amount <= maxInterestDeposit[_id],
             "Cannot deposit more than allowed"
@@ -843,7 +879,7 @@ function initialize(address _owner) public initializer {
      */
     function _claimCoupon(uint _id, address _user, uint _indexCoupon) internal {
         require(
-            bond[_id].couponMaturity[_indexCoupon] <= block.timestamp,
+            bond[_id].couponMaturity[_indexCoupon] <= uint64(block.timestamp),
             "Coupon not Expired"
         );
         // Determine how many coupon units the user is entitled to
@@ -1797,15 +1833,10 @@ function initialize(address _owner) public initializer {
      *      2) Attempts to call `totalSupply()`; if it succeeds, it's likely ERC20.
      */
     function _thisIsERC20(address _addr) internal view returns (bool) {
-        // Verify the address has code (i.e., it's not externally-owned).
-        if (_addr.code.length == 0) {
-            return false;
-        }
-        // Try calling totalSupply(), which all ERC20 contracts should implement.
         try IERC20(_addr).balanceOf(address(this)) returns (uint256) {
             return true;
         } catch {
-            return false;
+            return _addr.code.length > 0;
         }
     }
 
@@ -1929,8 +1960,6 @@ function initialize(address _owner) public initializer {
     function viewPenalties(
         uint category
     ) external view returns (uint16[3] memory) {
-        require(category >= 1 && category <= 4, "Invalid category");
-
         if (category == 1) {
             return mediumPenalties;
         } else if (category == 2) {

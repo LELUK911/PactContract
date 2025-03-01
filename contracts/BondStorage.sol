@@ -23,8 +23,8 @@ contract BondStorage {
         address tokenLoan;
         uint sizeLoan;
         uint interest;
-        uint[] couponMaturity;
-        uint expiredBond;
+        uint64[] couponMaturity;
+        uint64 expiredBond;
         address tokenCollateral;
         uint collateral;
         uint balancLoanRepay;

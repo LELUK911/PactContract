@@ -3,7 +3,7 @@ const { ethers } = require("hardhat");
 
 describe('Test Bond, stable version', () => {
 
-    let bondContract, mockWETH, mockDai, mockBTC, mockAlt, owner, issuer, user1, user2, user3, user4;
+    let bondContract, mockWETH, mockDai, mockBTC, mockAlt, owner, issuer, user1, user2, user3, user4,accountant;
     let bondContractAddress, daiAddress, btcAddress, WETHaddress, Altaddress;
     let launchBondContract, launchBondContractAddress
     let upwardAuctionContract, upwardAuctionContractAddress
@@ -15,10 +15,10 @@ describe('Test Bond, stable version', () => {
     let expiredCoupons, expired
 
     beforeEach(async () => {
-        [owner, issuer, user1, user2, user3, user4] = await ethers.getSigners();
+        [owner, issuer, user1, user2, user3, user4,accountant] = await ethers.getSigners();
 
         const BondContractFactory = await ethers.getContractFactory("BondContract");
-        bondContract = await BondContractFactory.connect(owner).deploy(owner.address)
+        bondContract = await BondContractFactory.connect(owner).deploy(owner.address,accountant.address)
         await bondContract.waitForDeployment()
         bondContractAddress = await bondContract.getAddress()
 
@@ -90,7 +90,7 @@ describe('Test Bond, stable version', () => {
         await bondContract.connect(owner).setlauncherContract(launchBondContractAddress)
         await bondContract.connect(owner).setlauncherContract(launchBondContractAddress)
         await bondContract.connect(owner).setWETHaddress(WETHaddress)
-        await bondContract.connect(owner).setTreasuryAddress(owner.address) // Uguale all'owner per comodità nei test
+        await bondContract.connect(accountant).setTreasuryAddress(owner.address) // Uguale all'owner per comodità nei test
         await bondContract.connect(owner).setEcosistemAddress(upwardAuctionContractAddress, true) // Uguale all'owner per comodità nei test
         await bondContract.connect(owner).setEcosistemAddress(downwardAuctionContractAddress, true) // Uguale all'owner per comodità nei test
 
@@ -424,7 +424,7 @@ describe('Test Bond, stable version', () => {
 
         await expect(bondContract.connect(user2).claimLoan(4, 15)).to.emit(bondContract, "LoanClaimed");
         await expect(bondContract.connect(user3).claimLoan(4, 385)).to.emit(bondContract, "LoanClaimed");
-        await expect(bondContract.connect(owner).withdrawContractBalance(daiAddress)).to.emit(bondContract, 'WitrawBalanceContracr')
+        await expect(bondContract.connect(accountant).withdrawContractBalance(daiAddress)).to.emit(bondContract, 'WitrawBalanceContracr')
 
         //** User can withdraw collateral */
         await expect(bondContract.connect(issuer).withdrawCollateral(4)).to.emit(bondContract, 'CollateralWithdrawn')

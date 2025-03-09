@@ -17,15 +17,9 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {TimeManagment} from "./library/TimeManagement.sol";
 import {LightRoleControl} from "./lightRoleControl.sol";
 import {BondStorage} from "./BondStorage.sol";
-
-//import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-//import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-//import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-//import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
-//import {ERC1155Upgradeable} from '@openzeppelin/contracts-upgradeable/token/ERC1155/ERC1155Upgradeable.sol';
+import {IHelperBond} from "./interface/HelperBond.sol";
 
 contract BondContract is
     BondStorage,
@@ -153,10 +147,7 @@ contract BondContract is
      *      Ensures that `msg.sender` matches the 'issuer' field in the Bond struct.
      */
     modifier _onlyIssuer(uint _id) {
-        require(
-            msg.sender == bond[_id].issuer,
-            "Only Issuer can call this function"
-        );
+        require(msg.sender == bond[_id].issuer, "Only Issuer");
         _;
     }
 
@@ -169,7 +160,7 @@ contract BondContract is
      * @notice If `_address` is `address(0)`, the transaction will revert with "set correct Address".
      */
     modifier correctAddress(address _address) {
-        require(_address != address(0), "set correct Address");
+        require(_address != address(0), "Invalid Address");
         _;
     }
 
@@ -196,19 +187,14 @@ contract BondContract is
      * - Sets the initial bond counter (`bondId`) to 0.
      */
 
-    constructor(address _owner ,address _accountant) Ownable(_owner) LightRoleControl(_accountant) ERC1155("") {
+    constructor(
+        address _owner,
+        address _accountant,
+        address _Ihelperbond
+    ) Ownable(_owner) LightRoleControl(_accountant) ERC1155("") {
         MAX_COUPONS = 6;
+        IHelperBondAddres = _Ihelperbond;
     }
-
-    /*
-
-function initialize(address _owner) public initializer {
-        __Ownable_init();
-        transferOwnership(_owner);
-        bondId = 0;
-        MAX_COUPONS = 6; 
-    }
-*/
 
     /**
      * @dev Allows the contract owner to pause the contract (via OpenZeppelin's Pausable).
@@ -312,7 +298,7 @@ function initialize(address _owner) public initializer {
         uint16 _value
     ) external onlyOwner {
         require(_index < LIQUIDATION_FEE.length, "Invalid index");
-        require(_value > 0, "Value must be greater than 0");
+        require(_value > 0, "Value must > 0");
         LIQUIDATION_FEE[_index] = _value;
     }
 
@@ -367,7 +353,9 @@ function initialize(address _owner) public initializer {
      *
      * @param _tokenAddress The ERC20 token being withdrawn.
      */
-    function withdrawContractBalance(address _tokenAddress) external onlyAccountant {
+    function withdrawContractBalance(
+        address _tokenAddress
+    ) external onlyAccountant {
         uint balance = balanceContractFeesForToken[_tokenAddress];
         balanceContractFeesForToken[_tokenAddress] = 0;
         SafeERC20.safeTransfer(IERC20(_tokenAddress), treasury, balance);
@@ -509,11 +497,8 @@ function initialize(address _owner) public initializer {
         emit SafeBatchTransferFrom(from, to, ids, amounts);
     }
 
-
-
-
-    modifier correctAmount(uint _amount){
-        require(_amount > 0, "set correct amount for variables");
+    modifier correctAmount(uint _amount) {
+        require(_amount > 0, "amount must > 0");
         _;
     }
 
@@ -555,30 +540,18 @@ function initialize(address _owner) public initializer {
         uint _amount,
         string calldata _describes
     ) external whenNotPaused nonReentrant {
-        require(_thisIsERC20(_tokenLoan), "Set correct address for Token Loan");
-        require(_sizeLoan > 0, "set correct size Loan for variables");
-        require(_interest > 0, "set correct Interest for variables");
-        require(_collateral > 0, "set correct Collateral for variables");
-        require(_amount > 0, "set correct amount for variables");
-        require(_couponMaturity.length <= MAX_COUPONS, "Too many coupons");
-        require(
-            _tokenCollateral != _tokenLoan,
-            "Set different Token Loan and Collateral"
+        // this helper function saver space for other implementation
+        IHelperBond(IHelperBondAddres).newBondChecker(
+            MAX_COUPONS,
+            _couponMaturity,
+            _expiredBond,
+            _tokenLoan,
+            _tokenCollateral,
+            _sizeLoan,
+            _interest,
+            _collateral,
+            _amount
         );
-
-        // Validate coupon schedule and final expiry
-        require(
-            TimeManagment.checkDatalistAndExpired(
-                _couponMaturity,
-                _expiredBond
-            ),
-            "Set correct data, coupon maturity must be ascending; last < expiredBond"
-        );
-        require(
-            _expiredBond > _couponMaturity[_couponMaturity.length - 1],
-            "Set correct expiry for this bond"
-        );
-        require(_amount <= 1000000, "Amount exceeds max bond supply");
 
         // Update the issuer's score and charge an issuance fee
         _setScoreForUser(msg.sender);
@@ -679,7 +652,10 @@ function initialize(address _owner) public initializer {
     function claimScorePoint(
         uint _id
     ) external _onlyIssuer(_id) whenNotPaused nonReentrant {
-        require(bond[_id].expiredBond <= uint64(block.timestamp), "Bond isn't Expired");
+        require(
+            bond[_id].expiredBond <= uint64(block.timestamp),
+            "Bond isn't Expired"
+        );
         _claimScorePoint(_id, msg.sender);
     }
 
@@ -814,7 +790,7 @@ function initialize(address _owner) public initializer {
         address _issuer,
         address _tokenCollateral,
         uint _amount
-    ) internal  correctAmount(_amount){
+    ) internal correctAmount(_amount) {
         //require(_amount > 0, "Qta token Incorect");
         SafeERC20.safeTransferFrom(
             IERC20(_tokenCollateral),
@@ -838,13 +814,15 @@ function initialize(address _owner) public initializer {
         uint _id,
         address _issuer,
         uint _amount
-    ) internal correctAmount(_amount){
+    ) internal correctAmount(_amount) {
         require(!depositIsClose[_id], "Deposit is Close");
+        Bond storage b = bond[_id];
         if (maxInterestDeposit[_id] == 0) {
-            Bond storage b = bond[_id]; 
-            uint256 interestTotal = b.interest * b.couponMaturity.length; 
-            maxInterestDeposit[_id] = (b.sizeLoan + interestTotal) * _totalSupply[_id];
-        }   
+            uint256 interestTotal = b.interest * b.couponMaturity.length;
+            maxInterestDeposit[_id] =
+                (b.sizeLoan + interestTotal) *
+                _totalSupply[_id];
+        }
         require(
             _amount <= maxInterestDeposit[_id],
             "Cannot deposit more than allowed"
@@ -855,12 +833,12 @@ function initialize(address _owner) public initializer {
         }
 
         SafeERC20.safeTransferFrom(
-            IERC20(bond[_id].tokenLoan),
+            IERC20(b.tokenLoan),
             _issuer,
             address(this),
             _amount
         );
-        bond[_id].balancLoanRepay += _amount;
+        b.balancLoanRepay += _amount;
         emit InterestDeposited(_issuer, _id, _amount);
         maxInterestDeposit[_id] -= _amount;
     }
@@ -878,8 +856,9 @@ function initialize(address _owner) public initializer {
      * @param _indexCoupon  The index in the bond's `couponMaturity` array that identifies the coupon.
      */
     function _claimCoupon(uint _id, address _user, uint _indexCoupon) internal {
+        Bond storage b = bond[_id];
         require(
-            bond[_id].couponMaturity[_indexCoupon] <= uint64(block.timestamp),
+            b.couponMaturity[_indexCoupon] <= uint64(block.timestamp),
             "Coupon not Expired"
         );
         // Determine how many coupon units the user is entitled to
@@ -891,32 +870,31 @@ function initialize(address _owner) public initializer {
         // Calculate the total tokens owed (interest * quantity of coupons)
         uint qtaToCouponClaim = moltiplicator * bond[_id].interest;
 
-        if (qtaToCouponClaim <= bond[_id].balancLoanRepay) {
+        if (qtaToCouponClaim <= b.balancLoanRepay) {
             // 1) Enough to pay the entire coupon claim
-            bond[_id].balancLoanRepay -= qtaToCouponClaim;
+            b.balancLoanRepay -= qtaToCouponClaim;
 
             // Transfer the coupon minus the coupon fee
             SafeERC20.safeTransfer(
-                IERC20(bond[_id].tokenLoan),
+                IERC20(b.tokenLoan),
                 _user,
-                qtaToCouponClaim -
-                    _couponFee(bond[_id].tokenLoan, qtaToCouponClaim)
+                qtaToCouponClaim - _couponFee(b.tokenLoan, qtaToCouponClaim)
             );
 
             emit CouponClaimed(_user, _id, qtaToCouponClaim);
         } else if (
-            qtaToCouponClaim > bond[_id].balancLoanRepay &&
-            bond[_id].interest > bond[_id].balancLoanRepay
+            qtaToCouponClaim > b.balancLoanRepay &&
+            b.interest > b.balancLoanRepay
         ) {
             // 2) Not enough to pay even one coupon
-            _subtractionPrizePoin(_id, bond[_id].issuer, moltiplicator);
+            _subtractionPrizePoin(_id, b.issuer, moltiplicator);
             _executeLiquidationCoupon(_id, _user, moltiplicator);
 
             // Coupon claimed is effectively zero, since nothing was paid
             emit CouponClaimed(_user, _id, 0);
         } else if (
-            qtaToCouponClaim > bond[_id].balancLoanRepay &&
-            bond[_id].interest <= bond[_id].balancLoanRepay
+            qtaToCouponClaim > b.balancLoanRepay &&
+            b.interest <= b.balancLoanRepay
         ) {
             // 3) Partial coverage: some coupons can be paid, but not all
             _parzialLiquidationCoupon(_id, _user, moltiplicator);
@@ -944,11 +922,9 @@ function initialize(address _owner) public initializer {
      * @param _amount The quantity of bond tokens the user wants to redeem.
      */
     function _claimLoan(uint _id, address _user, uint _amount) internal {
+        Bond storage b = bond[_id];
         if (numberOfLiquidations[_id] <= 4) {
-            require(
-                bond[_id].expiredBond <= block.timestamp,
-                "Bond not be expirer"
-            );
+            require(b.expiredBond <= block.timestamp, "Bond not be expirer");
         }
         require(_amount <= _totalSupply[_id], "Amount exceeds total supply");
 
@@ -956,16 +932,16 @@ function initialize(address _owner) public initializer {
         _totalSupply[_id] -= _amount;
 
         // 1) Check if full repayment is possible: sizeLoan * _amount <= balancLoanRepay
-        if (bond[_id].sizeLoan * _amount <= bond[_id].balancLoanRepay) {
+        if (b.sizeLoan * _amount <= b.balancLoanRepay) {
             _totaLiquidationForBondExpired(_id, _user, _amount);
         }
         // 2) Check if partially enough: sizeLoan <= balancLoanRepay
-        else if (bond[_id].sizeLoan <= bond[_id].balancLoanRepay) {
+        else if (b.sizeLoan <= b.balancLoanRepay) {
             // Calculate how many tokens can be covered (rounded down)
-            uint capCanPay = bond[_id].balancLoanRepay / bond[_id].sizeLoan;
+            uint capCanPay = b.balancLoanRepay / b.sizeLoan;
 
             // Subtract points for any portion that can't be paid in full
-            _subtractionPrizePoin(_id, bond[_id].issuer, (_amount - capCanPay));
+            _subtractionPrizePoin(_id, b.issuer, (_amount - capCanPay));
 
             // Repay the portion we can pay
             _totaLiquidationForBondExpired(_id, _user, capCanPay);
@@ -979,7 +955,7 @@ function initialize(address _owner) public initializer {
         }
         // 3) Not enough to cover even one token -> full collateral liquidation
         else {
-            _subtractionPrizePoin(_id, bond[_id].issuer, _amount);
+            _subtractionPrizePoin(_id, b.issuer, _amount);
             _liquitationCollateralForBondExpired(_id, _user, _amount);
         }
     }
@@ -1003,30 +979,27 @@ function initialize(address _owner) public initializer {
         address _user,
         uint _moltiplicator
     ) internal {
-        uint couponCanRepay = bond[_id].balancLoanRepay / bond[_id].interest;
+        Bond storage b = bond[_id];
+        uint couponCanRepay = b.balancLoanRepay / b.interest;
 
         // Actual token amount to pay = number of coupons we can cover * interest
-        uint qtaToCouponClaim = couponCanRepay * bond[_id].interest;
+        uint qtaToCouponClaim = couponCanRepay * b.interest;
 
         // Reduce the repay balance accordingly
-        bond[_id].balancLoanRepay -= qtaToCouponClaim;
+        b.balancLoanRepay -= qtaToCouponClaim;
 
         // Transfer to the user the partial coupon, minus a coupon fee
         SafeERC20.safeTransfer(
-            IERC20(bond[_id].tokenLoan),
+            IERC20(b.tokenLoan),
             _user,
-            qtaToCouponClaim - _couponFee(bond[_id].tokenLoan, qtaToCouponClaim)
+            qtaToCouponClaim - _couponFee(b.tokenLoan, qtaToCouponClaim)
         );
 
         // Emit an event indicating a partial coupon claim
         emit CouponClaimed(_user, _id, _moltiplicator);
 
         // Subtract prize points from the issuer for failing to pay all requested coupons
-        _subtractionPrizePoin(
-            _id,
-            bond[_id].issuer,
-            (_moltiplicator - couponCanRepay)
-        );
+        _subtractionPrizePoin(_id, b.issuer, (_moltiplicator - couponCanRepay));
 
         // Execute liquidation on remaining unpaid coupons (collateral usage)
         _executeLiquidationCoupon(_id, _user, _moltiplicator - couponCanRepay);
@@ -1052,23 +1025,14 @@ function initialize(address _owner) public initializer {
         address _user,
         uint _moltiplicator
     ) internal {
-        require(
-            numberOfLiquidations[_id] <= 4,
-            "This bond is expired or totally liquidated"
-        );
-
-        // Increment the count of liquidation events for this bond
-        numberOfLiquidations[_id] += 1;
-
-        // Depending on the count of liquidations, apply different logic
-        if (numberOfLiquidations[_id] == 1) {
-            _logicExecuteLiquidationCoupon(_id, 0, _moltiplicator, _user);
-        } else if (numberOfLiquidations[_id] == 2) {
-            _logicExecuteLiquidationCoupon(_id, 1, _moltiplicator, _user);
-        } else if (numberOfLiquidations[_id] == 3) {
-            _logicExecuteLiquidationCoupon(_id, 2, _moltiplicator, _user);
-        } else if (numberOfLiquidations[_id] == 4) {
-            // Fully liquidate the bond collateral
+        // Cattura in locale il numero di liquidazioni per evitare più SLOAD
+        uint8 n = numberOfLiquidations[_id];
+        require(n <= 4, "This bond is expired or totally liquidated");
+        n++;
+        numberOfLiquidations[_id] = n;
+        if (n < 4) {
+            _logicExecuteLiquidationCoupon(_id, n - 1, _moltiplicator, _user);
+        } else {
             _logicExecuteLiquidationBond(_id, _moltiplicator, _user);
         }
     }
@@ -1094,33 +1058,31 @@ function initialize(address _owner) public initializer {
         uint _moltiplicator,
         address _user
     ) internal {
+        Bond storage b = bond[_id];
         // Calculate collateral portion to be liquidated based on penalty
-        uint percCollateralOfLiquidation = (bond[_id].collateral *
-            conditionOfFee[bond[_id].issuer].penalityForLiquidation[
-                _indexPenality
-            ]) / 10000;
+        uint percCollateralOfLiquidation = (b.collateral *
+            conditionOfFee[b.issuer].penalityForLiquidation[_indexPenality]) /
+            10000;
 
         // Divide that portion by total bond amount to get per-token collateral, then multiply by _moltiplicator
-        uint percForCoupon = percCollateralOfLiquidation / bond[_id].amount;
+        uint percForCoupon = percCollateralOfLiquidation / b.amount;
 
         // Calculate the liquidation fee on the portion being transferred
         uint fee = _liquidationFee(
-            bond[_id].issuer,
-            bond[_id].tokenCollateral,
+            b.issuer,
+            b.tokenCollateral,
             (percForCoupon * _moltiplicator)
         );
 
         // Reduce bond collateral by net amount (collateral minus fee)
-        bond[_id].collateral -= (percForCoupon * _moltiplicator) - fee;
+        b.collateral -= (percForCoupon * _moltiplicator) - fee;
 
         // Transfer the net collateral to the user
         SafeERC20.safeTransfer(
-            IERC20(bond[_id].tokenCollateral),
+            IERC20(b.tokenCollateral),
             _user,
             (percForCoupon * _moltiplicator) - fee
         );
-
-        // Emit an event to record the coupon liquidation
         emit LiquidationCoupon(_user, _id, _moltiplicator);
     }
 
@@ -1138,17 +1100,18 @@ function initialize(address _owner) public initializer {
         uint _moltiplicator,
         address _user
     ) internal {
+        Bond storage b = bond[_id];
         // The issuer loses all prize points for this bond
-        _lostPoint(_id, bond[_id].issuer);
+        _lostPoint(_id, b.issuer);
 
         // Increment the liquidation counter
         numberOfLiquidations[_id] += 1;
 
         // Calculate collateral per token and transfer it to the user
-        uint percForCoupon = bond[_id].collateral / bond[_id].amount;
-        bond[_id].collateral -= percForCoupon * _moltiplicator;
+        uint percForCoupon = b.collateral / b.amount;
+        b.collateral -= percForCoupon * _moltiplicator;
         SafeERC20.safeTransfer(
-            IERC20(bond[_id].tokenCollateral),
+            IERC20(b.tokenCollateral),
             _user,
             percForCoupon * _moltiplicator
         );
@@ -1182,22 +1145,23 @@ function initialize(address _owner) public initializer {
         uint _amount
     ) internal {
         // If not previously frozen, freeze the collateral for this bond
+        Bond storage b = bond[_id];
         if (freezCollateral[_id] == 0) {
             freezCollateral[_id] += 1;
-            liquidationFactor[_id] = bond[_id].collateral / bond[_id].amount;
+            liquidationFactor[_id] = b.collateral / b.amount;
         }
 
         // Calculate the per-token share of the collateral
         //uint collateralToLiquidate = bond[_id].collateral / bond[_id].amount;
         // Compute liquidation fee on the portion being redeemed
         uint fee = _liquidationFee(
-            bond[_id].issuer,
-            bond[_id].tokenLoan,
+            b.issuer,
+            b.tokenLoan,
             (liquidationFactor[_id] * _amount)
         );
 
         // Update bond's collateral (subtract the portion plus fee)
-        bond[_id].collateral -= (liquidationFactor[_id] * _amount); // + fee;
+        b.collateral -= (liquidationFactor[_id] * _amount); // + fee;
 
         // Remove coupon entitlements and burn the redeemed bond tokens
         _upDateCouponSell(_id, _user, _amount);
@@ -1205,7 +1169,7 @@ function initialize(address _owner) public initializer {
 
         // Transfer the net collateral to the user
         SafeERC20.safeTransfer(
-            IERC20(bond[_id].tokenCollateral),
+            IERC20(b.tokenCollateral),
             _user,
             (liquidationFactor[_id] * _amount) - fee
         );
@@ -1230,10 +1194,11 @@ function initialize(address _owner) public initializer {
         address _user,
         uint _amount
     ) internal {
+        Bond storage b = bond[_id];
         // Calculate total tokens to transfer based on the amount of bond tokens redeemed
-        uint valueTokenTransfer = bond[_id].sizeLoan * _amount;
+        uint valueTokenTransfer = b.sizeLoan * _amount;
         // Reduce the bond’s repay balance by the total repayment amount
-        bond[_id].balancLoanRepay -= bond[_id].sizeLoan * _amount;
+        b.balancLoanRepay -= b.sizeLoan * _amount;
 
         // Update coupons and burn the redeemed bond tokens
         _upDateCouponSell(_id, _user, _amount);
@@ -1241,14 +1206,10 @@ function initialize(address _owner) public initializer {
 
         // Transfer the repayment tokens (minus liquidation fee) to the user
         SafeERC20.safeTransfer(
-            (IERC20(bond[_id].tokenLoan)),
+            (IERC20(b.tokenLoan)),
             _user,
             valueTokenTransfer -
-                _liquidationFee(
-                    bond[_id].issuer,
-                    bond[_id].tokenLoan,
-                    valueTokenTransfer
-                )
+                _liquidationFee(b.issuer, b.tokenLoan, valueTokenTransfer)
         );
         // Emit event for successful loan claim
         emit LoanClaimed(_user, _id, _amount);
@@ -1266,24 +1227,25 @@ function initialize(address _owner) public initializer {
      */
     function _withdrawCollateral(uint _id, address _issuer) internal {
         // If collateral was previously frozen, wait 90 days past bond expiry
+        Bond storage b = bond[_id];
         if (freezCollateral[_id] != 0) {
             require(
-                bond[_id].expiredBond + (90 * (1 days)) <= block.timestamp,
+                b.expiredBond + (90 * (1 days)) <= block.timestamp,
                 "the collateral lock-up period has not yet expired, extended to 90 days for liquidation"
             );
         } else {
             // Otherwise, a standard 15-day lock after expiry
             require(
-                bond[_id].expiredBond + (15 * (1 days)) <= block.timestamp,
+                b.expiredBond + (15 * (1 days)) <= block.timestamp,
                 "the collateral lock-up period has not yet expired"
             );
         }
         // Transfer any remaining collateral to the issuer
-        uint amountCollateral = bond[_id].collateral;
-        bond[_id].collateral = 0;
+        uint amountCollateral = b.collateral;
+        b.collateral = 0;
 
         SafeERC20.safeTransfer(
-            IERC20(bond[_id].tokenCollateral),
+            IERC20(b.tokenCollateral),
             _issuer,
             amountCollateral
         );
@@ -1314,39 +1276,23 @@ function initialize(address _owner) public initializer {
         uint _amount,
         uint _sizeLoan
     ) internal {
-        if (
-            _sizeLoan >= 50e18 && // 5e19
-            _sizeLoan < 100e18 // 1e20
-        ) {
-            prizeScore[_id][_issuer] = _amount * 5;
-        }
-        if (
-            _sizeLoan >= 100e18 && // 1e20
-            _sizeLoan < 500e18 // 5e20
-        ) {
-            prizeScore[_id][_issuer] = _amount * 10;
-        }
-        if (
-            _sizeLoan >= 1000e18 && // 1e21
-            _sizeLoan < 5000e18 // 5e21
-        ) {
-            prizeScore[_id][_issuer] = _amount * 20;
-        }
-        if (
-            _sizeLoan >= 5000e18 && // 5e21
-            _sizeLoan < 1e22 // 1e22
-        ) {
-            prizeScore[_id][_issuer] = _amount * 30;
-        }
-        if (
-            _sizeLoan >= 1e22 && // 1e22
-            _sizeLoan < 1e23
-        ) {
-            prizeScore[_id][_issuer] = _amount * 50;
-        }
+        uint newScore;
         if (_sizeLoan >= 1e23) {
-            prizeScore[_id][_issuer] = _amount * 70;
+            newScore = _amount * 70;
+        } else if (_sizeLoan >= 1e22) {
+            newScore = _amount * 50;
+        } else if (_sizeLoan >= 5000e18) {
+            newScore = _amount * 30;
+        } else if (_sizeLoan >= 1000e18) {
+            newScore = _amount * 20;
+        } else if (_sizeLoan >= 100e18) {
+            newScore = _amount * 10;
+        } else if (_sizeLoan >= 50e18) {
+            newScore = _amount * 5;
+        } else {
+            newScore = 0; // Se _sizeLoan non soddisfa nessuna condizione, opzionale
         }
+        prizeScore[_id][_issuer] = newScore;
     }
 
     /**
@@ -1363,12 +1309,10 @@ function initialize(address _owner) public initializer {
      * @param _user The address of the user whose score and penalty structure are updated.
      */
     function _setScoreForUser(address _user) internal {
-        // Case 1: new user or medium range
-        if (
-            conditionOfFee[_user].score == 0 ||
-            (conditionOfFee[_user].score <= 1000000 &&
-                conditionOfFee[_user].score >= 700000)
-        ) {
+        uint score = conditionOfFee[_user].score; // Legge il punteggio una sola volta
+
+        if (score == 0 || (score >= 700000 && score <= 1000000)) {
+            // Caso: nuovo utente o punteggio nella fascia "media" [700k, 1M]
             uint16[3] memory penalties = [
                 uint16(100),
                 uint16(200),
@@ -1376,18 +1320,13 @@ function initialize(address _owner) public initializer {
             ];
             conditionOfFee[_user] = ConditionOfFee(penalties, 700100);
             emit ScoreUpdated(_user, 700100);
-        }
-        // Case 2: high score (>1M)
-        else if (conditionOfFee[_user].score > 1000000) {
+        } else if (score > 1000000) {
+            // Caso: punteggio alto (>1M)
             uint16[3] memory penalties = [uint16(50), uint16(100), uint16(200)];
             conditionOfFee[_user].penalityForLiquidation = penalties;
-            emit ScoreUpdated(_user, 100000); // Possibly set to 1,000,000 or another logic as needed
-        }
-        // Case 3: low score [500k, 700k)
-        else if (
-            conditionOfFee[_user].score < 700000 &&
-            conditionOfFee[_user].score >= 500000
-        ) {
+            emit ScoreUpdated(_user, 100000);
+        } else if (score >= 500000 && score < 700000) {
+            // Caso: punteggio basso [500k, 700k)
             uint16[3] memory penalties = [
                 uint16(200),
                 uint16(400),
@@ -1395,9 +1334,8 @@ function initialize(address _owner) public initializer {
             ];
             conditionOfFee[_user].penalityForLiquidation = penalties;
             emit ScoreUpdated(_user, 500000);
-        }
-        // Case 4: very low score (<500k)
-        else if (conditionOfFee[_user].score < 500000) {
+        } else {
+            // Caso: punteggio molto basso (<500k)
             uint16[3] memory penalties = [
                 uint16(280),
                 uint16(450),
@@ -1426,33 +1364,34 @@ function initialize(address _owner) public initializer {
         address _issuer,
         uint _amount
     ) internal {
+        Bond storage b = bond[_id];
         // Loan in [5e19, 1e20)
-        if (bond[_id].sizeLoan >= 50e18 && bond[_id].sizeLoan < 100e18) {
+        if (b.sizeLoan >= 50e18 && b.sizeLoan < 100e18) {
             _chekPointIsnZeri(_id, _issuer, _amount, 2);
         }
 
         // Loan in [1e20, 5e20)
-        if (bond[_id].sizeLoan >= 100e18 && bond[_id].sizeLoan < 500e18) {
+        if (b.sizeLoan >= 100e18 && b.sizeLoan < 500e18) {
             _chekPointIsnZeri(_id, _issuer, _amount, 5);
         }
 
         // Loan in [1e21, 5e21)
-        if (bond[_id].sizeLoan >= 1000e18 && bond[_id].sizeLoan < 5000e18) {
+        if (b.sizeLoan >= 1000e18 && b.sizeLoan < 5000e18) {
             _chekPointIsnZeri(_id, _issuer, _amount, 10);
         }
 
         // Loan in [5e21, 1e22)
-        if (bond[_id].sizeLoan >= 5000e18 && bond[_id].sizeLoan < 1e22) {
+        if (b.sizeLoan >= 5000e18 && b.sizeLoan < 1e22) {
             _chekPointIsnZeri(_id, _issuer, _amount, 15);
         }
 
         // Loan in [1e22, 1e23)
-        if (bond[_id].sizeLoan >= 1e22 && bond[_id].sizeLoan < 1e23) {
+        if (b.sizeLoan >= 1e22 && b.sizeLoan < 1e23) {
             _chekPointIsnZeri(_id, _issuer, _amount, 25);
         }
 
         // Loan < 1e23
-        if (bond[_id].sizeLoan < 1e23) {
+        if (b.sizeLoan < 1e23) {
             _chekPointIsnZeri(_id, _issuer, _amount, 35);
         }
     }
@@ -1586,8 +1525,9 @@ function initialize(address _owner) public initializer {
         address _tokenAddress,
         uint _amountCollateral
     ) internal returns (uint) {
+        uint score = conditionOfFee[_iusser].score ;
         // High score, minimal fee
-        if (conditionOfFee[_iusser].score > 1000000) {
+        if (score > 1000000) {
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,
@@ -1597,8 +1537,8 @@ function initialize(address _owner) public initializer {
         }
         // Medium-high score
         if (
-            conditionOfFee[_iusser].score > 700000 &&
-            conditionOfFee[_iusser].score <= 1000000
+            score > 700000 &&
+            score <= 1000000
         ) {
             return
                 _updateBalanceContractForEmissionNewBond(
@@ -1609,8 +1549,8 @@ function initialize(address _owner) public initializer {
         }
         // Medium-low score
         if (
-            conditionOfFee[_iusser].score > 500000 &&
-            conditionOfFee[_iusser].score <= 700000
+            score > 500000 &&
+            score <= 700000
         ) {
             return
                 _updateBalanceContractForEmissionNewBond(
@@ -1620,7 +1560,7 @@ function initialize(address _owner) public initializer {
                 ); // 3%
         }
         // Low score
-        if (conditionOfFee[_iusser].score <= 500000) {
+        if (score <= 500000) {
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,
@@ -1682,41 +1622,33 @@ function initialize(address _owner) public initializer {
         address _tokenAddress,
         uint _amountCollateral
     ) internal returns (uint) {
-        // High score => 0.5%
-        if (conditionOfFee[_iusser].score > 1000000) {
+        uint score = conditionOfFee[_iusser].score;
+
+        if (score > 1000000) {
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,
                     _amountCollateral,
                     LIQUIDATION_FEE[0]
                 );
-        }
-        // Medium-high score => 1.5%
-        if (
-            conditionOfFee[_iusser].score > 700000 &&
-            conditionOfFee[_iusser].score <= 1000000
-        ) {
+        } else if (score > 700000) {
+            // Implica che score <= 1000000
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,
                     _amountCollateral,
                     LIQUIDATION_FEE[1]
                 );
-        }
-        // Medium-low score => 3%
-        if (
-            conditionOfFee[_iusser].score > 500000 &&
-            conditionOfFee[_iusser].score <= 700000
-        ) {
+        } else if (score > 500000) {
+            // Implica che score <= 700000
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,
                     _amountCollateral,
                     LIQUIDATION_FEE[2]
                 );
-        }
-        // Low score => 5%
-        if (conditionOfFee[_iusser].score <= 500000) {
+        } else {
+            // score <= 500000
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,
@@ -1724,7 +1656,6 @@ function initialize(address _owner) public initializer {
                     LIQUIDATION_FEE[3]
                 );
         }
-        return 0;
     }
 
     /**
@@ -1818,26 +1749,6 @@ function initialize(address _owner) public initializer {
      */
     function getMissQtaInterest(uint _id) public view returns (uint) {
         return maxInterestDeposit[_id];
-    }
-
-    /**
-     * @dev Checks if an address is non-zero. Returns true if valid, false otherwise.
-     */
-    function _isValidAddress(address _addr) internal pure returns (bool) {
-        return _addr != address(0);
-    }
-
-    /**
-     * @dev Basic check to see if a given address looks like an ERC20 contract.
-     *      1) Ensures the address has contract code.
-     *      2) Attempts to call `totalSupply()`; if it succeeds, it's likely ERC20.
-     */
-    function _thisIsERC20(address _addr) internal view returns (bool) {
-        try IERC20(_addr).balanceOf(address(this)) returns (uint256) {
-            return true;
-        } catch {
-            return _addr.code.length > 0;
-        }
     }
 
     /**

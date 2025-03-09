@@ -17,8 +17,13 @@ describe('Test Bond, stable version', () => {
     beforeEach(async () => {
         [owner, issuer, user1, user2, user3, user4,accountant] = await ethers.getSigners();
 
+        const HelperBond = await ethers.getContractFactory('HelperBond');
+        const helperBond = await HelperBond.deploy()
+        await helperBond.waitForDeployment()
+        const helperAddress = await helperBond.getAddress()
+
         const BondContractFactory = await ethers.getContractFactory("BondContract");
-        bondContract = await BondContractFactory.connect(owner).deploy(owner.address,accountant.address)
+        bondContract = await BondContractFactory.connect(owner).deploy(owner.address,accountant.address,helperAddress)
         await bondContract.waitForDeployment()
         bondContractAddress = await bondContract.getAddress()
 

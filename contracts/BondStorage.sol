@@ -183,5 +183,5 @@ contract BondStorage {
     mapping(uint => bool) internal depositIsClose;
 
 
-    
+    address immutable internal IHelperBondAddres;
 }

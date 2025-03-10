@@ -36,14 +36,8 @@ import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "./interface/Ibond.sol";
 // Custom interface specific to the project's bond functionality, providing a standardized way
 // for the contract to interact with bond-related operations or logic unique to this system.
-
 import {UpwardAuctionStorage} from "./UpwardAuctionStorage.sol";
 // Storage contract that contains the state variables and mappings required for the DownwardAuction system.
-
-//import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-//import {PausableUpgradeable} from "@openzeppelin/contracts-upgradeable/security/PausableUpgradeable.sol";
-//import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-//import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 
@@ -158,26 +152,6 @@ contract UpwardAuction is
         _grantRole(OWNER_ROLE, msg.sender);
     }
 
-    /*
-
-    function initialize(
-        address _owner,
-        address _bondContrac,
-        address _money,
-        uint _fixedFee,
-        uint _priceThreshold,
-        uint _dinamicFee
-    ) public initializer {
-        __Ownable_init(); // Initializes the OwnableUpgradeable contract to handle ownership.
-        transferOwnership(_owner); // Transfers ownership to the specified owner address.
-        bondContract = _bondContrac;
-        money = _money;
-
-        feeSystem.fixedFee = _fixedFee;
-        feeSystem.priceThreshold = _priceThreshold;
-        feeSystem.dinamicFee = _dinamicFee;
-    }
-    */
 
     /**
      * @dev Updates the address of the ERC1155 bond contract.

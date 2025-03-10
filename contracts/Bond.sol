@@ -16,8 +16,7 @@ import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
-import {LightRoleControl} from "./lightRoleControl.sol";
+import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {BondStorage} from "./BondStorage.sol";
 import {IHelperBond} from "./interface/HelperBond.sol";
 
@@ -26,9 +25,14 @@ contract BondContract is
     ERC1155,
     Pausable,
     ReentrancyGuard,
-    Ownable,
-    LightRoleControl
+    AccessControl
 {
+    /**
+     * @dev See {IERC165-supportsInterface}.
+     */
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, AccessControl) returns (bool) {
+        return super.supportsInterface(interfaceId);
+    }
     /**
      * @dev Emitted when a single safe transfer occurs (part of the custom logic).
      */
@@ -151,6 +155,10 @@ contract BondContract is
         _;
     }
 
+
+
+
+
     /**
      * @dev Ensures that the provided address is valid.
      *      The address must not be the zero address (address(0)),
@@ -191,16 +199,20 @@ contract BondContract is
         address _owner,
         address _accountant,
         address _Ihelperbond
-    ) Ownable(_owner) LightRoleControl(_accountant) ERC1155("") {
+    ) AccessControl() ERC1155("") {
         MAX_COUPONS = 6;
         IHelperBondAddres = _Ihelperbond;
+
+        _grantRole(AccessControl.DEFAULT_ADMIN_ROLE, _owner);
+        _grantRole(ACCOUNTANT_ROLE, _accountant);
+        _grantRole(OWNER_ROLE, _owner);
     }
 
     /**
      * @dev Allows the contract owner to pause the contract (via OpenZeppelin's Pausable).
      *      When paused, certain functions or transfers may be restricted.
      */
-    function setInPause() external onlyOwner {
+    function setInPause() external onlyRole(OWNER_ROLE) {
         _pause();
     }
 
@@ -208,7 +220,7 @@ contract BondContract is
      * @dev Allows the contract owner to unpause the contract.
      *      Restores normal operation after a pause.
      */
-    function setUnPause() external onlyOwner {
+    function setUnPause() external onlyRole(OWNER_ROLE) {
         _unpause();
     }
 
@@ -217,7 +229,7 @@ contract BondContract is
      *      This function can only be called by the owner of the contract.
      * @param _MAX_COUPONS The new maximum number of coupons to be set.
      */
-    function setMAX_COUPONS(uint8 _MAX_COUPONS) external onlyOwner {
+    function setMAX_COUPONS(uint8 _MAX_COUPONS) external onlyRole(OWNER_ROLE) {
         MAX_COUPONS = _MAX_COUPONS;
     }
 
@@ -225,7 +237,7 @@ contract BondContract is
      * @dev Updates the fixed transfer fee (in WETH). Only the owner can modify.
      * @param _fee The new fee value.
      */
-    function setTransfertFee(uint _fee) external onlyOwner {
+    function setTransfertFee(uint _fee) external onlyRole(OWNER_ROLE) {
         transfertFee = _fee;
     }
 
@@ -238,7 +250,7 @@ contract BondContract is
     function setEcosistemAddress(
         address _contract,
         bool _state
-    ) external onlyOwner {
+    ) external onlyRole(OWNER_ROLE) {
         ecosistemAddress[_contract] = _state;
     }
 
@@ -249,7 +261,7 @@ contract BondContract is
      */
     function setlauncherContract(
         address _address
-    ) external onlyOwner correctAddress(_address) {
+    ) external onlyRole(OWNER_ROLE) correctAddress(_address) {
         launcherContract = _address;
     }
 
@@ -260,7 +272,7 @@ contract BondContract is
      */
     function setWETHaddress(
         address _address
-    ) external onlyOwner correctAddress(_address) {
+    ) external onlyRole(OWNER_ROLE) correctAddress(_address) {
         WHET = _address;
     }
 
@@ -270,7 +282,7 @@ contract BondContract is
      * @param _fee The new coupon fee to be set. Must be greater than zero.
      * @notice Ensures that the fee is set to a valid value to prevent incorrect configurations.
      */
-    function setCOUPON_FEE(uint16 _fee) external onlyOwner {
+    function setCOUPON_FEE(uint16 _fee) external onlyRole(OWNER_ROLE) {
         require(_fee > 0, "Set a valid fee");
         COUPON_FEE = _fee;
     }
@@ -282,7 +294,7 @@ contract BondContract is
      */
     function setTreasuryAddress(
         address _address
-    ) external onlyAccountant correctAddress(_address) {
+    ) external onlyRole(ACCOUNTANT_ROLE) correctAddress(_address) {
         treasury = _address;
     }
 
@@ -296,7 +308,7 @@ contract BondContract is
     function updateLiquidationFee(
         uint _index,
         uint16 _value
-    ) external onlyOwner {
+    ) external onlyRole(OWNER_ROLE) {
         require(_index < LIQUIDATION_FEE.length, "Invalid index");
         require(_value > 0, "Value must > 0");
         LIQUIDATION_FEE[_index] = _value;
@@ -310,7 +322,7 @@ contract BondContract is
      */
     function updateLiquidationFees(
         uint16[4] memory _newFees
-    ) external onlyOwner {
+    ) external onlyRole(OWNER_ROLE) {
         LIQUIDATION_FEE = _newFees;
     }
 
@@ -325,7 +337,7 @@ contract BondContract is
     function updatePenalties(
         uint category,
         uint16[3] memory newPenalties
-    ) external onlyOwner invalidCategory(category) {
+    ) external onlyRole(OWNER_ROLE) invalidCategory(category) {
         require(
             newPenalties.length == 3,
             "Array must contain exactly 3 values"
@@ -355,7 +367,7 @@ contract BondContract is
      */
     function withdrawContractBalance(
         address _tokenAddress
-    ) external onlyAccountant {
+    ) external onlyRole(ACCOUNTANT_ROLE) {
         uint balance = balanceContractFeesForToken[_tokenAddress];
         balanceContractFeesForToken[_tokenAddress] = 0;
         SafeERC20.safeTransfer(IERC20(_tokenAddress), treasury, balance);
@@ -1525,7 +1537,7 @@ contract BondContract is
         address _tokenAddress,
         uint _amountCollateral
     ) internal returns (uint) {
-        uint score = conditionOfFee[_iusser].score ;
+        uint score = conditionOfFee[_iusser].score;
         // High score, minimal fee
         if (score > 1000000) {
             return
@@ -1536,10 +1548,7 @@ contract BondContract is
                 ); // 0.5%
         }
         // Medium-high score
-        if (
-            score > 700000 &&
-            score <= 1000000
-        ) {
+        if (score > 700000 && score <= 1000000) {
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,
@@ -1548,10 +1557,7 @@ contract BondContract is
                 ); // 1.5%
         }
         // Medium-low score
-        if (
-            score > 500000 &&
-            score <= 700000
-        ) {
+        if (score > 500000 && score <= 700000) {
             return
                 _updateBalanceContractForEmissionNewBond(
                     _tokenAddress,

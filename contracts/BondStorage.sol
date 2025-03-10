@@ -184,4 +184,9 @@ contract BondStorage {
 
 
     address immutable internal IHelperBondAddres;
+
+
+
+    bytes32 public constant OWNER_ROLE = keccak256("OWNER_ROLE");
+    bytes32 public constant ACCOUNTANT_ROLE = keccak256("ACCOUNTANT_ROLE");
 }

@@ -152,7 +152,7 @@ describe('Test Bond, stable version', () => {
     });
     it('deploys correctly and initializes variables', async () => {
         const bondID = await bondContract.connect(owner).viewBondID()
-        const ownerAddress = await bondContract.connect(owner).owner()
+        //const ownerAddress = await bondContract.connect(owner).owner() //! Access control not support this control 
         const wethAddress = await bondContract.connect(owner).showWETHaddress()
         const transferFee = await bondContract.connect(owner).showTransfertFee()
         const BondContractAddressInLauncher = await launchBondContract.connect(owner).showBondContractAddress()
@@ -180,7 +180,7 @@ describe('Test Bond, stable version', () => {
 
         //todo controlli manuali fatti successivamente settero quelli formali
         expect(await bondID.toString()).to.eq('0')
-        expect(ownerAddress).to.eq(owner.address)
+        //expect(ownerAddress).to.eq(owner.address)//! access controll not support this function
         expect(wethAddress).to.eq(WETHaddress)
         expect(transferFee.toString()).to.eq((ethers.parseUnits('0.01')).toString())
         expect(BondContractAddressInLauncher).to.eq(bondContractAddress)

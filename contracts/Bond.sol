@@ -156,9 +156,6 @@ contract BondContract is
     }
 
 
-
-
-
     /**
      * @dev Ensures that the provided address is valid.
      *      The address must not be the zero address (address(0)),

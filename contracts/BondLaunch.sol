@@ -80,7 +80,7 @@ contract BondLaunch is
      * @param buyer Address of the user buying the bond.
      * @param amount Number of bond units purchased.
      */
-    event BuyBond(address indexed buyer, uint indexed amount);
+    event BuyBond(address indexed buyer, uint indexed amount,uint indexed id);
 
     /**
      * @dev Emitted when a user withdraws tokens from the contract.
@@ -294,7 +294,7 @@ contract BondLaunch is
             _amount *
             bondDetail.sizeLoan; // Update the issuer's token balance.
         bondBuyForUser[_user][_id] += _amount; // Update the buyer's bond balance.
-        emit BuyBond(_user, _amount); // Emit an event for the bond purchase.
+        emit BuyBond(_user, _amount,_id); // Emit an event for the bond purchase.
     }
 
     /**

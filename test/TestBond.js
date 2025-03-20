@@ -152,12 +152,14 @@ describe('Test Bond, stable version', () => {
     });
     it('deploys correctly and initializes variables', async () => {
         const bondID = await bondContract.connect(owner).viewBondID()
-        //const ownerAddress = await bondContract.connect(owner).owner() //! Access control not support this control 
+
         const wethAddress = await bondContract.connect(owner).showWETHaddress()
         const transferFee = await bondContract.connect(owner).showTransfertFee()
         const BondContractAddressInLauncher = await launchBondContract.connect(owner).showBondContractAddress()
         const BondContractAddressInUpwardAuction = await upwardAuctionContract.connect(owner).showBondContractAddress()
         const BondContractAddressInDownwardAuction = await downwardAuctionContract.connect(owner).showBondContractAddress()
+        const OWNER_ROLE = await bondContract.OWNER_ROLE();
+        const isOwner = await bondContract.hasRole(OWNER_ROLE, owner.address);
 
         const echelonsControl = [
             1000000000000000000000n,
@@ -180,7 +182,9 @@ describe('Test Bond, stable version', () => {
 
         //todo controlli manuali fatti successivamente settero quelli formali
         expect(await bondID.toString()).to.eq('0')
-        //expect(ownerAddress).to.eq(owner.address)//! access controll not support this function
+
+
+        expect(isOwner).to.equal(true);
         expect(wethAddress).to.eq(WETHaddress)
         expect(transferFee.toString()).to.eq((ethers.parseUnits('0.01')).toString())
         expect(BondContractAddressInLauncher).to.eq(bondContractAddress)

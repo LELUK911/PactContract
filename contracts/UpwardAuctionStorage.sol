@@ -6,8 +6,8 @@ pragma solidity ^0.8.24;
  * @dev Storage structure for the UpwardAuction contract, containing all variables and data mappings necessary for the auction system.
  */
 contract UpwardAuctionStorage {
-    // Address of the ERC1155 bond contract.
-    address internal bondContract;
+    // Address of the ERC1155 pact contract.
+    address internal pactContract;
 
     // Address of the payment token contract (e.g., WETH or USDC).
     address internal money;
@@ -27,8 +27,8 @@ contract UpwardAuctionStorage {
     /**
      * @dev Represents an individual auction.
      * @param owner Address of the user who created the auction.
-     * @param id Unique identifier of the bond being auctioned.
-     * @param amount Number of bond units available in the auction.
+     * @param id Unique identifier of the pact being auctioned.
+     * @param amount Number of pact units available in the auction.
      * @param startPrice Starting price of the auction.
      * @param expired Timestamp when the auction expires.
      * @param pot Current highest bid in the auction.

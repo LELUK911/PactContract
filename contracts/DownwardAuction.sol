@@ -27,7 +27,7 @@ import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 // Standard for interface detection, allowing external systems to verify the supported interfaces of this contract.
 
 import "./interface/Ibond.sol";
-// Interface specific to the project's bond functionality, providing a standardized way to interact with bonds.
+// Interface specific to the project's pact functionality, providing a standardized way to interact with bonds.
 
 import {DownwardAuctionStorage} from "./DownwardAuctionStorage.sol";
 // Storage contract that contains the state variables and mappings required for the DownwardAuction system.
@@ -49,7 +49,7 @@ contract DownwardAuction is
     AccessControl // Role-based access control for contract functions.
 {
     constructor(
-        address _bondContrac,
+        address _pactContrac,
         address _money,
         uint _fixedFee,
         uint _priceThreshold,
@@ -58,8 +58,8 @@ contract DownwardAuction is
         address _accountant,
         address _admin
     )  AccessControl() {
-        // Set the address of the ERC1155 bond contract
-        bondContract = _bondContrac;
+        // Set the address of the ERC1155 pact contract
+        pactContract = _pactContrac;
 
         // Set the address of the ERC20 token used as currency
         money = _money;
@@ -91,9 +91,9 @@ contract DownwardAuction is
     /**
      * @dev Event emitted when a new auction is created.
      * @param _owner The address of the auction creator.
-     * @param _id The unique identifier of the bond associated with the auction.
+     * @param _id The unique identifier of the pact associated with the auction.
      * @param _amount The quantity of bonds being auctioned.
-     * @notice Provides transparency for new auction creation, including the creator's address, bond ID, and amount.
+     * @notice Provides transparency for new auction creation, including the creator's address, pact ID, and amount.
      */
     event NewAuction(address indexed _owner, uint indexed _id, uint _amount);
 
@@ -119,13 +119,13 @@ contract DownwardAuction is
     event CloseAuction(uint _index, uint _time);
 
     /**
-     * @dev Event emitted when a bond is withdrawn by its owner after an auction ends.
-     * @param _user The address of the bond owner withdrawing their bond.
+     * @dev Event emitted when a pact is withdrawn by its owner after an auction ends.
+     * @param _user The address of the pact owner withdrawing their pact.
      * @param _index The index of the auction in the `auctions` array.
      * @param amount The amount of bonds withdrawn by the owner.
-     * @notice Confirms the withdrawal of bonds by the rightful owner, including the auction index and bond amount.
+     * @notice Confirms the withdrawal of bonds by the rightful owner, including the auction index and pact amount.
      */
-    event WithDrawBond(
+    event WithDrawPact(
         address indexed _user,
         uint indexed _index,
         uint indexed amount
@@ -176,13 +176,13 @@ contract DownwardAuction is
     );
 
     /**
-     * @dev Event emitted when the bond contract address is updated.
-     * @param previousAddress The previous address of the bond contract.
-     * @param newAddress The new address of the bond contract.
-     * @notice This event provides transparency regarding changes to the bond contract address,
+     * @dev Event emitted when the pact contract address is updated.
+     * @param previousAddress The previous address of the pact contract.
+     * @param newAddress The new address of the pact contract.
+     * @notice This event provides transparency regarding changes to the pact contract address,
      *         allowing external systems or users to track updates for security and auditing purposes.
      */
-    event BondAddressUpdated(
+    event PactAddressUpdated(
         address indexed previousAddress,
         address indexed newAddress
     );
@@ -199,29 +199,29 @@ contract DownwardAuction is
     }
 
     /**
-     * @dev Updates the address of the ERC1155 bond contract.
-     * @param _bondContrac The new address of the bond contract.
+     * @dev Updates the address of the ERC1155 pact contract.
+     * @param _pactContrac The new address of the pact contract.
      * @notice Only the owner of the contract can execute this function.
      *         The function ensures that the provided address is valid (non-zero) and emits an event
-     *         to notify that the bond contract address has been updated.
-     * Require The new bond contract address must not be the zero address.
-     * Require The new bond contract address must be different from the current one.
+     *         to notify that the pact contract address has been updated.
+     * Require The new pact contract address must not be the zero address.
+     * Require The new pact contract address must be different from the current one.
      * @notice This function is protected by `nonReentrant` to prevent reentrancy attacks,
      *         even though it does not handle funds. This is an additional layer of security.
      */
-    function setNewBondAddress(
-        address _bondContrac
+    function setNewPactAddress(
+        address _pactContrac
     ) external onlyRole(OWNER_ROLE) nonReentrant {
-        require(_bondContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
+        require(_pactContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
-            _bondContrac != bondContract,
+            _pactContrac != pactContract,
             "Address already set to this value"
         ); // Ensures the new address is not the same as the current one.
 
-        address previousAddress = bondContract; // Stores the current address before updating.
-        bondContract = _bondContrac; // Updates the bond contract address.
+        address previousAddress = pactContract; // Stores the current address before updating.
+        pactContract = _pactContrac; // Updates the pact contract address.
 
-        emit BondAddressUpdated(previousAddress, _bondContrac); // Emits an event to log the update.
+        emit PactAddressUpdated(previousAddress, _pactContrac); // Emits an event to log the update.
     }
 
     /**
@@ -272,25 +272,25 @@ contract DownwardAuction is
     }
 
     /**
-     * @dev Creates a new auction bond.
-     * @param _id The unique identifier of the bond.
+     * @dev Creates a new auction pact.
+     * @param _id The unique identifier of the pact.
      * @param _amount The quantity of bonds to be auctioned.
      * @param _startPrice The starting price for the auction.
      * @param _expired The expiration timestamp for the auction.
      * @param _tolleratedDiscount The maximum discount (in basis points) tolerated in the auction.
-     * @notice The bond amount and starting price must be greater than 0.
+     * @notice The pact amount and starting price must be greater than 0.
      * @notice The expiration time must be at least `minPeriodAuction` in the future.
      * @notice The tolerated discount cannot exceed 10000 basis points (100%).
      * @notice This function can only be called when the contract is not paused.
      */
-    function newAcutionBond(
+    function newAcutionPact(
         uint _id,
         uint _amount,
         uint _startPrice,
         uint _expired,
         uint _tolleratedDiscount
     ) external virtual nonReentrant whenNotPaused {
-        require(_amount > 0, "Set correct bond's amount"); // Validate bond amount
+        require(_amount > 0, "Set correct pact's amount"); // Validate pact amount
         require(_startPrice > 0, "Set correct start price"); // Validate starting price
         require(
             _expired > (block.timestamp + minPeriodAuction),
@@ -300,10 +300,10 @@ contract DownwardAuction is
             _tolleratedDiscount <= 10000,
             "set correct tolleranze discount"
         ); // Validate tolerated discount
-        _newAcutionBond(
+        _newAcutionPact(
             msg.sender, // Auction creator
-            _id, // Bond ID
-            _amount, // Bond amount
+            _id, // Pact ID
+            _amount, // Pact amount
             _startPrice, // Starting price
             _expired, // Expiration timestamp
             _tolleratedDiscount // Tolerated discount
@@ -340,14 +340,14 @@ contract DownwardAuction is
     }
 
     /**
-     * @dev Withdraws the bond from a closed auction.
-     * @param _index The index of the auction to withdraw the bond from.
+     * @dev Withdraws the pact from a closed auction.
+     * @param _index The index of the auction to withdraw the pact from.
      * @notice This function can only be called when the contract is not paused.
      */
-    function withDrawBond(
+    function withDrawPact(
         uint _index
     ) external virtual nonReentrant whenNotPaused outIndex(_index) {
-        _withDrawBond(msg.sender, _index);
+        _withDrawPact(msg.sender, _index);
     }
 
     /**
@@ -410,16 +410,16 @@ contract DownwardAuction is
     }
 
     /**
-     * @dev Initializes a new auction for a specific bond.
+     * @dev Initializes a new auction for a specific pact.
      * @param _user The address of the user creating the auction.
-     * @param _id The unique ID of the bond being auctioned.
+     * @param _id The unique ID of the pact being auctioned.
      * @param _amount The amount of bonds to be auctioned.
      * @param _startPrice The starting price for the auction.
      * @param _expired The expiration timestamp for the auction.
      * @param _tolleratedDiscount The maximum discount tolerated during the auction.
-     * @notice This function transfers the specified bond amount to the contract and sets up the auction data.
+     * @notice This function transfers the specified pact amount to the contract and sets up the auction data.
      */
-    function _newAcutionBond(
+    function _newAcutionPact(
         address _user,
         uint _id,
         uint _amount,
@@ -427,7 +427,7 @@ contract DownwardAuction is
         uint _expired,
         uint _tolleratedDiscount
     ) internal virtual {
-        _depositBond(_user, address(this), _id, _amount); // Transfer the bond to the contract
+        _depositPact(_user, address(this), _id, _amount); // Transfer the pact to the contract
         _setAuctionData(
             _user,
             _id,
@@ -440,25 +440,25 @@ contract DownwardAuction is
 
     /**
      * @dev Transfers a specified amount of bonds from a user to a target address.
-     * @param _user The address of the bond owner.
-     * @param _to The target address to receive the bond.
-     * @param _id The unique ID of the bond being transferred.
+     * @param _user The address of the pact owner.
+     * @param _to The target address to receive the pact.
+     * @param _id The unique ID of the pact being transferred.
      * @param _amount The amount of bonds to be transferred.
      * @notice Uses the ERC1155 `safeTransferFrom` function to ensure a secure transfer.
      */
-    function _depositBond(
+    function _depositPact(
         address _user,
         address _to,
         uint _id,
         uint _amount
     ) internal virtual {
-        IERC1155(bondContract).safeTransferFrom(_user, _to, _id, _amount, ""); // Transfer bonds securely
+        IERC1155(pactContract).safeTransferFrom(_user, _to, _id, _amount, ""); // Transfer bonds securely
     }
 
     /**
      * @dev Sets the data for a new auction and stores it in the `auctions` array.
      * @param _owner The address of the auction creator.
-     * @param _id The unique ID of the bond being auctioned.
+     * @param _id The unique ID of the pact being auctioned.
      * @param _amount The amount of bonds to be auctioned.
      * @param _startPrice The starting price for the auction.
      * @param _expired The expiration timestamp for the auction.
@@ -477,8 +477,8 @@ contract DownwardAuction is
         uint[] memory _penality; // Initialize an empty penalty array
         Auction memory _auction = Auction(
             _owner, // Auction creator
-            _id, // Bond ID
-            _amount, // Bond amount
+            _id, // Pact ID
+            _amount, // Pact amount
             _startPrice, // Starting price
             _expired, // Expiration timestamp
             0, // Initial pot (set to zero)
@@ -819,27 +819,27 @@ contract DownwardAuction is
 
     /**
      * @dev Withdraws bonds from the contract after the auction ends.
-     * @param _owner The address of the bond owner requesting the withdrawal.
+     * @param _owner The address of the pact owner requesting the withdrawal.
      * @param _index The index of the auction in the `auctions` array.
      * @notice Ensures the auction is closed and the caller is the owner.
-     *         Transfers the bond amount back to the owner.
+     *         Transfers the pact amount back to the owner.
      */
-    function _withDrawBond(address _owner, uint _index) internal virtual {
+    function _withDrawPact(address _owner, uint _index) internal virtual {
         require(_owner == auctions[_index].owner, "Not Owner");
         require(auctions[_index].open == false, "This auction is Open");
 
-        uint amountBond = auctions[_index].amount;
+        uint amountPact = auctions[_index].amount;
         auctions[_index].amount = 0;
-        _depositBond(
+        _depositPact(
             address(this),
             auctions[_index].owner,
             auctions[_index].id,
-            amountBond
+            amountPact
         );
-        emit WithDrawBond(
+        emit WithDrawPact(
             auctions[_index].owner,
             auctions[_index].id,
-            amountBond
+            amountPact
         );
     }
 
@@ -1073,13 +1073,13 @@ contract DownwardAuction is
     }
 
     /**
-     * @dev Returns the address of the bond contract.
-     * @return The address of the bond contract currently set in the system.
-     * @notice This function provides visibility into the bond contract address
+     * @dev Returns the address of the pact contract.
+     * @return The address of the pact contract currently set in the system.
+     * @notice This function provides visibility into the pact contract address
      *         for external users or systems interacting with the contract.
      */
-    function showBondContractAddress() public view returns (address) {
-        return bondContract;
+    function showPactContractAddress() public view returns (address) {
+        return pactContract;
     }
 
     function setTreasury(address _treasury) external onlyRole(ACCOUNTANT_ROLE) {

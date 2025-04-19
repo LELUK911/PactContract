@@ -9,7 +9,7 @@ pragma solidity ^0.8.24;
  * - Pausable: allows pausing and unpausing the contract (e.g., in emergencies).
  * - ReentrancyGuard: prevents reentrancy attacks (recursive calls on sensitive functions).
  * - Ownable: defines an 'owner' role with special privileges (e.g., pause/unpause, fee updates).
- * - TimeManagement: custom library for date and time operations (e.g., coupon maturities).
+ * - TimeManagement: custom library for date and time operations (e.g., scheduled reward maturities).
  */
 import {ERC1155} from "@openzeppelin/contracts/token/ERC1155/ERC1155.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -17,11 +17,11 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {BondStorage} from "./BondStorage.sol";
-import {IHelperBond} from "./interface/HelperBond.sol";
+import {PactStorage} from "./PactStorage.sol";
+import {IHelperPact} from "./interface/HelperBond.sol";
 
-contract BondContract is
-    BondStorage,
+contract PactContract is
+    PactStorage,
     ERC1155,
     Pausable,
     ReentrancyGuard,
@@ -54,78 +54,78 @@ contract BondContract is
     );
 
     /**
-     * @dev Emitted upon creating a new bond (BondCreated).
+     * @dev Emitted upon creating a new pact (PactCreated).
      */
-    event BondCreated(uint indexed id, address indexed issuer, uint amount);
+    event PactCreated(uint indexed id, address indexed debtor, uint amount);
 
     /**
-     * @dev Emitted when collateral is deposited for a bond.
+     * @dev Emitted when collateral is deposited for a pact.
      */
     event CollateralDeposited(
-        address indexed issuer,
+        address indexed debtor,
         uint indexed id,
         uint amount
     );
 
     /**
-     * @dev Emitted when collateral is withdrawn for a bond.
+     * @dev Emitted when collateral is withdrawn for a pact.
      */
     event CollateralWithdrawn(
-        address indexed issuer,
+        address indexed debtor,
         uint indexed id,
         uint amount
     );
 
     /**
-     * @dev Emitted when interest tokens are deposited to cover bond coupons.
+     * @dev Emitted when interest tokens are deposited to cover pact rewards.
      */
     event InterestDeposited(
-        address indexed issuer,
+        address indexed debtor,
         uint indexed id,
         uint amount
     );
 
     /**
-     * @dev Emitted when a user claims an interest coupon for a bond.
+     * @dev Emitted when a user claims an interest scheduled reward for a pact.
      */
-    event CouponClaimed(address indexed user, uint indexed id, uint amount);
+    event RewardClaimed(address indexed user, uint indexed id, uint amount);
 
     /**
-     * @dev Emitted when a user claims the loan amount (principal) at bond expiry.
+     * @dev Emitted when a user claims the loan amount (principal) at pact expiry.
      */
     event LoanClaimed(address indexed user, uint indexed id, uint amount);
 
     /**
-     * @dev Emitted when the issuer's score is updated, typically after certain events.
+     * @dev Emitted when the debtor's score is updated, typically after certain events.
      */
-    event ScoreUpdated(address indexed issuer, uint newScore);
+    event ScoreUpdated(address indexed debtor, uint newScore);
 
     /**
-     * @dev Event emitted when a coupon liquidation process occurs.
-     * @param user   The address of the bond holder initiating the liquidation.
-     * @param id     The bond ID.
-     * @param amount The amount of coupons (multiplier) involved in the liquidation.
+     * @dev Event emitted when a scheduled reward liquidation process occurs.
+     * @param user   The address of the pact holder initiating the liquidation.
+     * @param id     The pact ID.
+     * @param amount The amount of rewards (multiplier) involved in the liquidation.
      */
-    event LiquidationCoupon(
+    event LiquidationReward(
         address indexed user,
         uint indexed id,
         uint indexed amount
     );
 
     /**
-     * @dev Event emitted when the bond itself (collateral) is fully or further liquidated.
-     * @param id     The bond ID that is being liquidated.
+     * @dev Event emitted when the pact itself (collateral) is fully or further liquidated.
+     * @param id     The pact ID that is being liquidated.
      * @param amount The number of tokens or multiplier used to compute the liquidation portion.
      */
-    event LiquidationBond(uint indexed id, uint amount);
+    event LiquidationPact(uint indexed id, uint amount);
 
     /**
-     * @dev Event emitted when collateral is liquidated at bond expiry.
+     * @dev Event emitted when collateral is liquidated at pact expiry.
      * @param user   The user receiving the liquidated collateral.
-     * @param id     The bond ID being liquidated.
-     * @param amount The quantity of bond tokens being redeemed against collateral.
+     * @param id     The pact ID being liquidated.
+     * @param amount The quantity of pact tokens being redeemed against collateral.
      */
-    event LiquitationCollateralBondExpired(
+    event LiquitationCollateralPactExpired(
         address indexed user,
         uint indexed id,
         uint amount
@@ -147,11 +147,11 @@ contract BondContract is
     event WitrawBalanceContracr(address indexed token, uint indexed amount);
 
     /**
-     * @dev Restricts access to functions so that only the bond's issuer can call them.
-     *      Ensures that `msg.sender` matches the 'issuer' field in the Bond struct.
+     * @dev Restricts access to functions so that only the pact's debtor can call them.
+     *      Ensures that `msg.sender` matches the 'debtor' field in the Pact struct.
      */
-    modifier _onlyIssuer(uint _id) {
-        require(msg.sender == bond[_id].issuer, "Only Issuer");
+    modifier _onlyDebtor(uint _id) {
+        require(msg.sender == pact[_id].debtor, "Only Debtor");
         _;
     }
 
@@ -189,16 +189,16 @@ contract BondContract is
      * @dev Constructor sets initial state:
      * - Assigns the contract owner using `Ownable(_owner)`.
      * - Initializes the ERC1155 base URI as an empty string (can be overridden later).
-     * - Sets the initial bond counter (`bondId`) to 0.
+     * - Sets the initial pact counter (`pactId`) to 0.
      */
 
     constructor(
         address _owner,
         address _accountant,
-        address _Ihelperbond
+        address _Ihelperpact
     ) AccessControl() ERC1155("") {
-        MAX_COUPONS = 6;
-        IHelperBondAddres = _Ihelperbond;
+        MAX_REWARDS = 6;
+        IHelperPactAddres = _Ihelperpact;
 
         _grantRole(AccessControl.DEFAULT_ADMIN_ROLE, _owner);
         _grantRole(ACCOUNTANT_ROLE, _accountant);
@@ -222,12 +222,12 @@ contract BondContract is
     }
 
     /**
-     * @dev Updates the maximum number of coupons allowed for bonds.
+     * @dev Updates the maximum number of rewards allowed for bonds.
      *      This function can only be called by the owner of the contract.
-     * @param _MAX_COUPONS The new maximum number of coupons to be set.
+     * @param _MAX_COUPONS The new maximum number of rewards to be set.
      */
     function setMAX_COUPONS(uint8 _MAX_COUPONS) external onlyRole(OWNER_ROLE) {
-        MAX_COUPONS = _MAX_COUPONS;
+        MAX_REWARDS = _MAX_COUPONS;
     }
 
     /**
@@ -252,7 +252,7 @@ contract BondContract is
     }
 
     /**
-     * @dev Sets the launcher contract address where the first bond transfer should be directed.
+     * @dev Sets the launcher contract address where the first pact transfer should be directed.
      *      Must not be the zero address.
      * @param _address The address of the launcher contract.
      */
@@ -274,14 +274,14 @@ contract BondContract is
     }
 
     /**
-     * @dev Sets the coupon fee used in the system.
+     * @dev Sets the scheduled reward fee used in the system.
      *      This function can only be called by the owner of the contract.
-     * @param _fee The new coupon fee to be set. Must be greater than zero.
+     * @param _fee The new scheduled reward fee to be set. Must be greater than zero.
      * @notice Ensures that the fee is set to a valid value to prevent incorrect configurations.
      */
     function setCOUPON_FEE(uint16 _fee) external onlyRole(OWNER_ROLE) {
         require(_fee > 0, "Set a valid fee");
-        COUPON_FEE = _fee;
+        REWARD_FEE = _fee;
     }
 
     /**
@@ -375,22 +375,22 @@ contract BondContract is
 
     /**
      * @dev Overridden safeTransferFrom that enforces:
-     *      1. "firstTransfer" logic: if tokens move from `launcherContract` back to the bond issuer,
+     *      1. "firstTransfer" logic: if tokens move from `launcherContract` back to the pact debtor,
      *         the next transfer must also go to the `launcherContract`.
      *      2. A transfer fee in WETH if both `from` and `to` are outside the ecosystem.
      *
      * Steps:
-     *  - If `from == launcherContract && to == bond[id].issuer`, set `firstTransfer[id] = true`.
+     *  - If `from == launcherContract && to == pact[id].debtor`, set `firstTransfer[id] = true`.
      *    Otherwise, set it to false.
      *  - If `firstTransfer[id]` is true, require `to == launcherContract`.
      *  - If both addresses are non-ecosystem, charge `transfertFee` in WETH from `from`.
-     *  - Update the coupon ownership logic (`_upDateCouponSell` / `_upDateCouponBuy`).
+     *  - Update the scheduled reward ownership logic (`_upDateRewardSell` / `_upDateRewardBuy`).
      *  - Perform the parent `safeTransferFrom` and emit a custom event.
      *
-     * @param from  The address sending (transferring) the bond tokens.
-     * @param to    The address receiving the bond tokens.
-     * @param id    The unique identifier (token ID) for the bond type being transferred.
-     * @param amount The quantity of tokens of that bond ID to transfer.
+     * @param from  The address sending (transferring) the pact tokens.
+     * @param to    The address receiving the pact tokens.
+     * @param id    The unique identifier (token ID) for the pact type being transferred.
+     * @param amount The quantity of tokens of that pact ID to transfer.
      * @param data  Additional data, forwarded to the parent ERC1155 contract call.
      */
     function safeTransferFrom(
@@ -402,13 +402,13 @@ contract BondContract is
     ) public override whenNotPaused nonReentrant correctAddress(to) {
         //require(to != address(0), "ERC1155: transfer to the zero address");
 
-        // If this bond is flagged for the next transfer to go to launcher, enforce that
+        // If this pact is flagged for the next transfer to go to launcher, enforce that
         if (firstTransfer[id]) {
             require(to == launcherContract, "1st tx must send Launcher");
         }
 
-        // If tokens move from the launcher back to the issuer, force the next transfer to go to the launcher
-        if (from == launcherContract && to == bond[id].issuer) {
+        // If tokens move from the launcher back to the debtor, force the next transfer to go to the launcher
+        if (from == launcherContract && to == pact[id].debtor) {
             firstTransfer[id] = true;
         } else {
             firstTransfer[id] = false;
@@ -430,9 +430,9 @@ contract BondContract is
             balanceContractFeesForToken[WHET] += transfertFee;
         }
 
-        // Update coupon ownership (removing from the seller, granting to the buyer)
-        _upDateCouponSell(id, from, amount);
-        _upDateCouponBuy(id, to, amount);
+        // Update scheduled reward ownership (removing from the seller, granting to the buyer)
+        _upDateRewardSell(id, from, amount);
+        _upDateRewardBuy(id, to, amount);
 
         // Execute the actual ERC1155 transfer
         super.safeTransferFrom(from, to, id, amount, data);
@@ -445,10 +445,10 @@ contract BondContract is
      * @dev Overridden safeBatchTransferFrom that:
      *      1. Applies a WETH fee if both `from` and `to` are outside the ecosystem.
      *      2. Checks and updates the `firstTransfer` logic for each token ID in the batch.
-     *      3. Updates coupon ownership for each bond ID transferred.
+     *      3. Updates scheduled reward ownership for each pact ID transferred.
      *
-     * @param from   The address sending (transferring) the bond tokens.
-     * @param to     The address receiving the bond tokens.
+     * @param from   The address sending (transferring) the pact tokens.
+     * @param to     The address receiving the pact tokens.
      * @param ids    An array of token IDs to transfer.
      * @param amounts An array of respective quantities for each token ID in `ids`.
      * @param data   Additional data passed through to the parent ERC1155 function call.
@@ -466,7 +466,7 @@ contract BondContract is
         );
         //require(to != address(0), "ERC1155: transfer to the zero address");
 
-        // If both addresses are outside the ecosystem, charge a fee for each bond ID
+        // If both addresses are outside the ecosystem, charge a fee for each pact ID
         if (!ecosistemAddress[from] && !ecosistemAddress[to]) {
             SafeERC20.safeTransferFrom(
                 IERC20(WHET),
@@ -477,26 +477,26 @@ contract BondContract is
             balanceContractFeesForToken[WHET] += transfertFee * ids.length;
         }
 
-        // Update coupon ownership for each ID, and enforce 'firstTransfer' rules
+        // Update scheduled reward ownership for each ID, and enforce 'firstTransfer' rules
         for (uint256 i = 0; i < ids.length; ++i) {
             uint256 id = ids[i];
             uint256 amount = amounts[i];
 
-            // If this bond ID is flagged for firstTransfer, it must go to the launcher
+            // If this pact ID is flagged for firstTransfer, it must go to the launcher
             if (firstTransfer[id]) {
                 require(to == launcherContract, "1st tx must send Launcher");
             }
 
-            // If transferring from the launcher back to issuer, re-enable firstTransfer for next time
-            if (from == launcherContract && to == bond[id].issuer) {
+            // If transferring from the launcher back to debtor, re-enable firstTransfer for next time
+            if (from == launcherContract && to == pact[id].debtor) {
                 firstTransfer[id] = true;
             } else {
                 firstTransfer[id] = false;
             }
 
-            // Update coupon ownership (subtract from `from`, add to `to`)
-            _upDateCouponSell(id, from, amount);
-            _upDateCouponBuy(id, to, amount);
+            // Update scheduled reward ownership (subtract from `from`, add to `to`)
+            _upDateRewardSell(id, from, amount);
+            _upDateRewardBuy(id, to, amount);
         }
 
         // Execute the actual ERC1155 batch transfer
@@ -512,48 +512,48 @@ contract BondContract is
     }
 
     /**
-     * @dev Creates a new bond, verifying key parameters and locking collateral.
+     * @dev Creates a new pact, verifying key parameters and locking collateral.
      *      1) Checks the validity of `_tokenLoan` (must look like an ERC20).
      *      2) Ensures that loan, interest, collateral, and amount are > 0.
-     *      3) Validates coupon maturities and final expiry using the TimeManagment library.
-     *      4) Updates the issuer's score and takes an issuance fee (`_emisionBondFee`).
-     *      5) Deposits collateral and records the new bond in storage.
+     *      3) Validates scheduled reward maturities and final expiry using the TimeManagment library.
+     *      4) Updates the debtor's score and takes an issuance fee (`_emisionPactFee`).
+     *      5) Deposits collateral and records the new pact in storage.
      *
      * Steps:
      *  - Check that `_tokenLoan` is a valid ERC20, and all necessary fields (`_sizeLoan`, `_interest`, etc.) are > 0.
-     *  - Verify the coupon maturity schedule (`_couponMaturity`) is strictly increasing and ends before `_expiredBond`.
-     *  - Update the issuer’s score and calculate an issuance fee.
-     *  - Transfer `_collateral` from `_issuer` to the contract, subtracting the fee from the final bond collateral.
-     *  - Increment bondId, then store bond details by calling `_createNewBond`.
-     *  - Optionally, `_setInitialPrizePoint` seeds reward points for the issuer.
-     *  - `_upDateCouponBuy` is called here for testing (may be removed or adjusted).
+     *  - Verify the scheduled reward maturity schedule (`_rewardMaturity`) is strictly increasing and ends before `_expiredPact`.
+     *  - Update the debtor’s score and calculate an issuance fee.
+     *  - Transfer `_collateral` from `_debtor` to the contract, subtracting the fee from the final pact collateral.
+     *  - Increment pactId, then store pact details by calling `_createNewPact`.
+     *  - Optionally, `_setInitialPrizePoint` seeds reward points for the debtor.
+     *  - `_upDateRewardBuy` is called here for testing (may be removed or adjusted).
      *
-     * @param _tokenLoan        The ERC20 token used to represent the bond's principal.
-     * @param _sizeLoan         The total amount the issuer wants to borrow.
-     * @param _interest         The interest (per coupon) or rate to be paid.
-     * @param _couponMaturity   Array of timestamps representing the coupon due dates.
-     * @param _expiredBond      The timestamp after which the bond is fully matured.
+     * @param _tokenLoan        The ERC20 token used to represent the pact's principal.
+     * @param _sizeLoan         The total amount the debtor wants to borrow.
+     * @param _interest         The interest (per scheduled reward) or rate to be paid.
+     * @param _rewardMaturity   Array of timestamps representing the scheduled reward due dates.
+     * @param _expiredPact      The timestamp after which the pact is fully matured.
      * @param _tokenCollateral  The ERC20 token used as collateral.
      * @param _collateral       The amount of collateral pledged.
-     * @param _amount           The total supply (quantity) of the bond to mint (ERC1155).
-     * @param _describes        A descriptive string explaining the bond.
+     * @param _amount           The total supply (quantity) of the pact to mint (ERC1155).
+     * @param _describes        A descriptive string explaining the pact.
      */
-    function createNewBond(
+    function createNewPact(
         address _tokenLoan,
         uint _sizeLoan,
         uint _interest,
-        uint64[] memory _couponMaturity,
-        uint64 _expiredBond,
+        uint64[] memory _rewardMaturity,
+        uint64 _expiredPact,
         address _tokenCollateral,
         uint _collateral,
         uint _amount,
         string calldata _describes
     ) external whenNotPaused nonReentrant {
         // this helper function saver space for other implementation
-        IHelperBond(IHelperBondAddres).newBondChecker(
-            MAX_COUPONS,
-            _couponMaturity,
-            _expiredBond,
+        IHelperPact(IHelperPactAddres).newPactChecker(
+            MAX_REWARDS,
+            _rewardMaturity,
+            _expiredPact,
             _tokenLoan,
             _tokenCollateral,
             _sizeLoan,
@@ -562,26 +562,26 @@ contract BondContract is
             _amount
         );
 
-        // Update the issuer's score and charge an issuance fee
+        // Update the debtor's score and charge an issuance fee
         _setScoreForUser(msg.sender);
-        uint fee = _emisionBondFee(msg.sender, _tokenCollateral, _collateral);
+        uint fee = _emisionPactFee(msg.sender, _tokenCollateral, _collateral);
 
-        // Transfer collateral from issuer to this contract
+        // Transfer collateral from debtor to this contract
         _depositCollateralToken(msg.sender, _tokenCollateral, _collateral);
 
-        // Prepare a unique bond ID
-        uint currentId = bondId;
+        // Prepare a unique pact ID
+        uint currentId = pactId;
         incementID();
 
-        // Store and initialize the new bond
-        _createNewBond(
+        // Store and initialize the new pact
+        _createNewPact(
             currentId,
             msg.sender,
             _tokenLoan,
             _sizeLoan,
             _interest,
-            _couponMaturity,
-            _expiredBond,
+            _rewardMaturity,
+            _expiredPact,
             _tokenCollateral,
             _collateral - fee, // subtract the issuance fee
             0, // balancLoanRepay starts at 0
@@ -592,30 +592,30 @@ contract BondContract is
         // Assign initial prize score (if applicable)
         _setInitialPrizePoint(currentId, msg.sender, _amount, _sizeLoan);
 
-        // For testing/demo, updates coupons as if they're already held by the issuer
-        _upDateCouponBuy(currentId, msg.sender, _amount); // This line may be removed later
+
+        _upDateRewardBuy(currentId, msg.sender, _amount); //! Check befor deploy in mainet
     }
 
     /**
-     * @dev Allows a user to claim the coupon (interest payment) for a specific bond at a given coupon index.
-     *      Calls the internal function `_claimCoupon`, forwarding `msg.sender` as the claimant.
+     * @dev Allows a user to claim the scheduled reward (interest payment) for a specific pact at a given scheduled reward index.
+     *      Calls the internal function `_claimReward`, forwarding `msg.sender` as the claimant.
      *
-     * @param _id           The ID of the bond for which the coupon is claimed.
-     * @param _indexCoupon  The index in the bond’s `couponMaturity` array identifying which coupon is claimed.
+     * @param _id           The ID of the pact for which the scheduled reward is claimed.
+     * @param _indexReward  The index in the pact’s `rewardMaturity` array identifying which scheduled reward is claimed.
      */
-    function claimCouponForUSer(
+    function claimRewardForUSer(
         uint _id,
-        uint8 _indexCoupon
+        uint8 _indexReward
     ) external whenNotPaused nonReentrant {
-        _claimCoupon(_id, msg.sender, _indexCoupon);
+        _claimReward(_id, msg.sender, _indexReward);
     }
 
     /**
-     * @dev Allows a user to claim the principal (loan repayment) of a bond after its maturity.
+     * @dev Allows a user to claim the principal (loan repayment) of a pact after its maturity.
      *      Calls the internal function `_claimLoan`, forwarding `msg.sender` as the claimant.
      *
-     * @param _id      The ID of the bond to claim repayment from.
-     * @param _amount  The quantity of bond tokens the user wants to redeem for the loan.
+     * @param _id      The ID of the pact to claim repayment from.
+     * @param _amount  The quantity of pact tokens the user wants to redeem for the loan.
      */
     function claimLoan(
         uint _id,
@@ -625,10 +625,10 @@ contract BondContract is
     }
 
     /**
-     * @dev Allows the bond's issuer to deposit tokens used to pay interest (coupons) or repay the loan.
+     * @dev Allows the pact's debtor to deposit tokens used to pay interest (rewards) or repay the loan.
      *      Internally calls `_depositTokenForInterest`, transferring `_amount` from `msg.sender`.
      *
-     * @param _id     The ID of the bond for which tokens are being deposited.
+     * @param _id     The ID of the pact for which tokens are being deposited.
      * @param _amount The amount of tokenLoan (ERC20) to deposit.
      */
     function depositTokenForInterest(
@@ -639,31 +639,31 @@ contract BondContract is
     }
 
     /**
-     * @dev Allows the bond issuer to withdraw the collateral at the end of the bond’s life.
-     *      This can be subject to conditions (e.g., issuer not in default, or certain time locks).
-     *      Uses the `_onlyIssuer` modifier to restrict calls to the bond’s issuer.
+     * @dev Allows the pact debtor to withdraw the collateral at the end of the pact’s life.
+     *      This can be subject to conditions (e.g., debtor not in default, or certain time locks).
+     *      Uses the `_onlyDebtor` modifier to restrict calls to the pact’s debtor.
      *
-     * @param _id The ID of the bond from which to withdraw collateral.
+     * @param _id The ID of the pact from which to withdraw collateral.
      */
     function withdrawCollateral(
         uint _id
-    ) external whenNotPaused nonReentrant _onlyIssuer(_id) {
+    ) external whenNotPaused nonReentrant _onlyDebtor(_id) {
         _withdrawCollateral(_id, msg.sender);
     }
 
     /**
-     * @dev Allows the bond issuer to claim “score points” after the bond has expired,
+     * @dev Allows the pact debtor to claim “score points” after the pact has expired,
      *      potentially improving their reputation or reducing future fees.
-     *      Requires the current time to be past the bond’s expiration.
+     *      Requires the current time to be past the pact’s expiration.
      *
-     * @param _id The ID of the bond for which score points are claimed.
+     * @param _id The ID of the pact for which score points are claimed.
      */
     function claimScorePoint(
         uint _id
-    ) external _onlyIssuer(_id) whenNotPaused nonReentrant {
+    ) external _onlyDebtor(_id) whenNotPaused nonReentrant {
         require(
-            bond[_id].expiredBond <= uint64(block.timestamp),
-            "Bond isn't Expired"
+            pact[_id].expiredPact <= uint64(block.timestamp),
+            "Pact isn't Expired"
         );
         _claimScorePoint(_id, msg.sender);
     }
@@ -671,97 +671,97 @@ contract BondContract is
     //? INTERNAL FUNCTION
 
     /**
-     * @notice Increments the bondId counter by 1.
-     *         Ensures each newly created bond has a unique ID.
+     * @notice Increments the pactId counter by 1.
+     *         Ensures each newly created pact has a unique ID.
      */
     function incementID() internal {
-        bondId += 1;
+        pactId += 1;
     }
 
     /**
-     * @dev Updates the coupon entitlements for a buyer acquiring bond tokens.
-     *      Increments the future coupon claims for `_user` by `qty`, but only for coupons that haven't yet matured.
+     * @dev Updates the scheduled reward entitlements for a buyer acquiring pact tokens.
+     *      Increments the future scheduled reward claims for `_user` by `qty`, but only for rewards that haven't yet matured.
      *
-     * @param _id   The ID of the bond.
-     * @param _user The address of the buyer receiving coupon entitlements.
-     * @param qty   The quantity of bond tokens being acquired.
+     * @param _id   The ID of the pact.
+     * @param _user The address of the buyer receiving scheduled reward entitlements.
+     * @param qty   The quantity of pact tokens being acquired.
      */
-    function _upDateCouponBuy(uint _id, address _user, uint qty) internal {
+    function _upDateRewardBuy(uint _id, address _user, uint qty) internal {
         uint64 time = uint64(block.timestamp);
-        for (uint8 i = 0; i < bond[_id].couponMaturity.length; i++) {
-            // Only grant coupon rights for coupons that haven't reached maturity yet
-            if (time < bond[_id].couponMaturity[i]) {
-                couponToClaim[_id][_user][i] += qty;
+        for (uint8 i = 0; i < pact[_id].rewardMaturity.length; i++) {
+            // Only grant scheduled reward rights for rewards that haven't reached maturity yet
+            if (time < pact[_id].rewardMaturity[i]) {
+                rewardToClaim[_id][_user][i] += qty;
             }
         }
     }
 
     /**
-     * @dev Updates the coupon entitlements for a seller when they transfer bond tokens away.
-     *      Decrements the seller’s future coupon claims by `qty`, but only for coupons that haven't yet matured.
+     * @dev Updates the scheduled reward entitlements for a seller when they transfer pact tokens away.
+     *      Decrements the seller’s future scheduled reward claims by `qty`, but only for rewards that haven't yet matured.
      *
-     * @param _id   The ID of the bond.
-     * @param _user The address of the seller losing coupon entitlements.
-     * @param qty   The quantity of bond tokens being transferred away.
+     * @param _id   The ID of the pact.
+     * @param _user The address of the seller losing scheduled reward entitlements.
+     * @param qty   The quantity of pact tokens being transferred away.
      */
-    function _upDateCouponSell(uint _id, address _user, uint qty) internal {
+    function _upDateRewardSell(uint _id, address _user, uint qty) internal {
         uint64 time = uint64(block.timestamp);
-        for (uint i = 0; i < bond[_id].couponMaturity.length; i++) {
-            // Only remove coupon rights for coupons that haven't matured yet
-            if (time < bond[_id].couponMaturity[i]) {
+        for (uint i = 0; i < pact[_id].rewardMaturity.length; i++) {
+            // Only remove scheduled reward rights for rewards that haven't matured yet
+            if (time < pact[_id].rewardMaturity[i]) {
                 require(
-                    couponToClaim[_id][_user][i] >= qty,
-                    "Insufficient coupons"
+                    rewardToClaim[_id][_user][i] >= qty,
+                    "Insufficient rewards"
                 );
-                couponToClaim[_id][_user][i] -= qty;
+                rewardToClaim[_id][_user][i] -= qty;
             }
         }
     }
 
     /**
-     * @dev Internal function to create a new bond and initialize its data structures.
-     *      1) Stores a new Bond struct in the `bond` mapping.
-     *      2) Increments the total supply of this bond ID (`_totalSupply[_id]`).
+     * @dev Internal function to create a new pact and initialize its data structures.
+     *      1) Stores a new Pact struct in the `pact` mapping.
+     *      2) Increments the total supply of this pact ID (`_totalSupply[_id]`).
      *      3) Sets `firstTransfer[_id] = true`, forcing the next transfer to be directed to the launcher contract.
-     *      4) Mints the corresponding ERC1155 tokens to `_issuer`.
-     *      5) Emits a `BondCreated` event.
+     *      4) Mints the corresponding ERC1155 tokens to `_debtor`.
+     *      5) Emits a `PactCreated` event.
      *
-     * @param _id             Unique identifier for the bond.
-     * @param _issuer         Address of the bond issuer.
-     * @param _tokenLoan      ERC20 token used for the bond's principal.
-     * @param _sizeLoan       Total loan size requested by the issuer.
-     * @param _interest       Interest rate/amount per coupon.
-     * @param _couponMaturity Array of timestamps indicating coupon maturities.
-     * @param _expiredBond    Timestamp after which the bond is fully matured.
+     * @param _id             Unique identifier for the pact.
+     * @param _debtor         Address of the pact debtor.
+     * @param _tokenLoan      ERC20 token used for the pact's principal.
+     * @param _sizeLoan       Total loan size requested by the debtor.
+     * @param _interest       Reward rate/amount per scheduled reward.
+     * @param _rewardMaturity Array of timestamps indicating scheduled reward maturities.
+     * @param _expiredPact    Timestamp after which the pact is fully matured.
      * @param _tokenCollateral ERC20 token used as collateral.
-     * @param _collateral     Amount of collateral locked for this bond.
+     * @param _collateral     Amount of collateral locked for this pact.
      * @param _balancLoanRepay Initial balance of tokens for loan repayment (usually 0).
-     * @param _amount         Total supply (quantity) of this bond token to be minted.
-     * @param _describes      A descriptive string explaining the bond.
+     * @param _amount         Total supply (quantity) of this pact token to be minted.
+     * @param _describes      A descriptive string explaining the pact.
      */
-    function _createNewBond(
+    function _createNewPact(
         uint _id,
-        address _issuer,
+        address _debtor,
         address _tokenLoan,
         uint _sizeLoan,
         uint _interest,
-        uint64[] memory _couponMaturity,
-        uint64 _expiredBond,
+        uint64[] memory _rewardMaturity,
+        uint64 _expiredPact,
         address _tokenCollateral,
         uint _collateral,
         uint _balancLoanRepay,
         uint _amount,
         string calldata _describes
     ) internal {
-        // Store the bond details in the mapping
-        bond[_id] = Bond(
+        // Store the pact details in the mapping
+        pact[_id] = Pact(
             _id,
-            _issuer,
+            _debtor,
             _tokenLoan,
             _sizeLoan,
             _interest,
-            _couponMaturity,
-            _expiredBond,
+            _rewardMaturity,
+            _expiredPact,
             _tokenCollateral,
             _collateral,
             _balancLoanRepay,
@@ -769,65 +769,65 @@ contract BondContract is
             _amount
         );
 
-        // Increase the total supply for this bond ID
+        // Increase the total supply for this pact ID
         _totalSupply[_id] += _amount;
 
         // Set firstTransfer to true, ensuring the next transfer must go to the launcher
         firstTransfer[_id] = true;
 
-        // Mint the bond tokens to the issuer
-        _mint(_issuer, _id, _amount, "");
+        // Mint the pact tokens to the debtor
+        _mint(_debtor, _id, _amount, "");
 
-        // Emit an event to signal bond creation
-        emit BondCreated(_id, _issuer, _amount);
+        // Emit an event to signal pact creation
+        emit PactCreated(_id, _debtor, _amount);
     }
 
     /**
-     * @dev Internal helper to transfer the collateral tokens from the issuer to this contract.
+     * @dev Internal helper to transfer the collateral tokens from the debtor to this contract.
      *      The amount must be greater than zero; otherwise it reverts.
      *
-     * @param _issuer          The address of the bond issuer.
+     * @param _debtor          The address of the pact debtor.
      * @param _tokenCollateral The ERC20 token used as collateral.
      * @param _amount          The quantity of collateral to deposit.
      *
      * @notice
-     *  The commented line below (bond[_id].balancLoanRepay += _amount;) might be needed
+     *  The commented line below (pact[_id].balancLoanRepay += _amount;) might be needed
      *  depending on whether you want to track the collateral as part of the loan repayment balance.
      *  Currently, it's left commented out to indicate further review:
      */
     function _depositCollateralToken(
-        address _issuer,
+        address _debtor,
         address _tokenCollateral,
         uint _amount
     ) internal correctAmount(_amount) {
         //require(_amount > 0, "Qta token Incorect");
         SafeERC20.safeTransferFrom(
             IERC20(_tokenCollateral),
-            _issuer,
+            _debtor,
             address(this),
             _amount
         );
         //! VERIFICARE SE È DA TOGLIERE O MENO
-        //!bond[_id].balancLoanRepay += _amount;
+        //!pact[_id].balancLoanRepay += _amount;
     }
 
     /**
-     * @dev Internal function to deposit tokens (usually ERC20 specified by `bond[_id].tokenLoan`)
-     *      for paying interest or principal. Increases the bond’s `balancLoanRepay`.
+     * @dev Internal function to deposit tokens (usually ERC20 specified by `pact[_id].tokenLoan`)
+     *      for paying interest or principal. Increases the pact’s `balancLoanRepay`.
      *
-     * @param _id      The ID of the bond for which tokens are being deposited.
-     * @param _issuer  The address depositing the tokens (typically the bond issuer).
+     * @param _id      The ID of the pact for which tokens are being deposited.
+     * @param _debtor  The address depositing the tokens (typically the pact debtor).
      * @param _amount  The quantity of tokens to deposit.
      */
     function _depositTokenForInterest(
         uint _id,
-        address _issuer,
+        address _debtor,
         uint _amount
     ) internal correctAmount(_amount) {
         require(!depositIsClose[_id], "Deposit is Close");
-        Bond storage b = bond[_id];
+        Pact storage b = pact[_id];
         if (maxInterestDeposit[_id] == 0) {
-            uint256 interestTotal = b.interest * b.couponMaturity.length;
+            uint256 interestTotal = b.interest * b.rewardMaturity.length;
             maxInterestDeposit[_id] =
                 (b.sizeLoan + interestTotal) *
                 _totalSupply[_id];
@@ -843,106 +843,106 @@ contract BondContract is
 
         SafeERC20.safeTransferFrom(
             IERC20(b.tokenLoan),
-            _issuer,
+            _debtor,
             address(this),
             _amount
         );
         b.balancLoanRepay += _amount;
-        emit InterestDeposited(_issuer, _id, _amount);
+        emit InterestDeposited(_debtor, _id, _amount);
         maxInterestDeposit[_id] -= _amount;
     }
 
     /**
-     * @dev Handles the claim of a coupon (interest payment) by a user for a specific coupon index.
-     *      1) Calculates how many coupons (`moltiplicator`) the user can claim, and sets it to 0 (so it can't be reused).
-     *      2) Checks the bond’s current `balancLoanRepay` to see if it can fully cover the entire coupon payment.
-     *         - If there's enough to cover all coupons, subtract from `balancLoanRepay`, apply a coupon fee, and transfer the remainder.
-     *         - If there's not enough to cover even one coupon, subtract points from the issuer and trigger a full coupon liquidation.
-     *         - If there's enough to cover some but not all coupons, execute a partial liquidation scenario.
+     * @dev Handles the claim of a scheduled reward (interest payment) by a user for a specific scheduled reward index.
+     *      1) Calculates how many rewards (`moltiplicator`) the user can claim, and sets it to 0 (so it can't be reused).
+     *      2) Checks the pact’s current `balancLoanRepay` to see if it can fully cover the entire scheduled reward payment.
+     *         - If there's enough to cover all rewards, subtract from `balancLoanRepay`, apply a scheduled reward fee, and transfer the remainder.
+     *         - If there's not enough to cover even one scheduled reward, subtract points from the debtor and trigger a full scheduled reward liquidation.
+     *         - If there's enough to cover some but not all rewards, execute a partial liquidation scenario.
      *
-     * @param _id           The ID of the bond for which the coupon is being claimed.
-     * @param _user         The address claiming the coupon.
-     * @param _indexCoupon  The index in the bond's `couponMaturity` array that identifies the coupon.
+     * @param _id           The ID of the pact for which the scheduled reward is being claimed.
+     * @param _user         The address claiming the scheduled reward.
+     * @param _indexReward  The index in the pact's `rewardMaturity` array that identifies the scheduled reward.
      */
-    function _claimCoupon(uint _id, address _user, uint _indexCoupon) internal {
-        Bond storage b = bond[_id];
+    function _claimReward(uint _id, address _user, uint _indexReward) internal {
+        Pact storage b = pact[_id];
         require(
-            b.couponMaturity[_indexCoupon] <= uint64(block.timestamp),
-            "Coupon not Expired"
+            b.rewardMaturity[_indexReward] <= uint64(block.timestamp),
+            "Scheduled Reward not Expired"
         );
-        // Determine how many coupon units the user is entitled to
-        uint moltiplicator = couponToClaim[_id][_user][_indexCoupon];
-        require(moltiplicator > 0, "Haven't Coupon for claim");
-        // Reset the user's coupon claim for this index
-        couponToClaim[_id][_user][_indexCoupon] = 0;
+        // Determine how many scheduled reward units the user is entitled to
+        uint moltiplicator = rewardToClaim[_id][_user][_indexReward];
+        require(moltiplicator > 0, "Haven't Scheduled Reward for claim");
+        // Reset the user's scheduled reward claim for this index
+        rewardToClaim[_id][_user][_indexReward] = 0;
 
-        // Calculate the total tokens owed (interest * quantity of coupons)
-        uint qtaToCouponClaim = moltiplicator * bond[_id].interest;
+        // Calculate the total tokens owed (interest * quantity of rewards)
+        uint qtaToRewardClaim = moltiplicator * pact[_id].interest;
 
-        if (qtaToCouponClaim <= b.balancLoanRepay) {
-            // 1) Enough to pay the entire coupon claim
-            b.balancLoanRepay -= qtaToCouponClaim;
+        if (qtaToRewardClaim <= b.balancLoanRepay) {
+            // 1) Enough to pay the entire scheduled reward claim
+            b.balancLoanRepay -= qtaToRewardClaim;
 
-            // Transfer the coupon minus the coupon fee
+            // Transfer the scheduled reward minus the scheduled reward fee
             SafeERC20.safeTransfer(
                 IERC20(b.tokenLoan),
                 _user,
-                qtaToCouponClaim - _couponFee(b.tokenLoan, qtaToCouponClaim)
+                qtaToRewardClaim - _couponFee(b.tokenLoan, qtaToRewardClaim)
             );
 
-            emit CouponClaimed(_user, _id, qtaToCouponClaim);
+            emit RewardClaimed(_user, _id, qtaToRewardClaim);
         } else if (
-            qtaToCouponClaim > b.balancLoanRepay &&
+            qtaToRewardClaim > b.balancLoanRepay &&
             b.interest > b.balancLoanRepay
         ) {
-            // 2) Not enough to pay even one coupon
-            _subtractionPrizePoin(_id, b.issuer, moltiplicator);
-            _executeLiquidationCoupon(_id, _user, moltiplicator);
+            // 2) Not enough to pay even one scheduled reward
+            _subtractionPrizePoin(_id, b.debtor, moltiplicator);
+            _executeLiquidationReward(_id, _user, moltiplicator);
 
-            // Coupon claimed is effectively zero, since nothing was paid
-            emit CouponClaimed(_user, _id, 0);
+            // Scheduled Reward claimed is effectively zero, since nothing was paid
+            emit RewardClaimed(_user, _id, 0);
         } else if (
-            qtaToCouponClaim > b.balancLoanRepay &&
+            qtaToRewardClaim > b.balancLoanRepay &&
             b.interest <= b.balancLoanRepay
         ) {
-            // 3) Partial coverage: some coupons can be paid, but not all
-            _parzialLiquidationCoupon(_id, _user, moltiplicator);
+            // 3) Partial coverage: some rewards can be paid, but not all
+            _parzialLiquidationReward(_id, _user, moltiplicator);
         }
     }
 
     /**
-     * @dev Handles the claim of the loan principal by a user once the bond has expired.
-     *      The user redeems a certain `_amount` of bond tokens, and in return receives the
+     * @dev Handles the claim of the loan principal by a user once the pact has expired.
+     *      The user redeems a certain `_amount` of pact tokens, and in return receives the
      *      corresponding portion of the loan (if available), potentially followed by collateral
      *      liquidation if there is insufficient balance in `balancLoanRepay`.
      *
      * Steps:
-     * 1) Checks if the bond is expired (`bond[_id].expiredBond <= block.timestamp`).
+     * 1) Checks if the pact is expired (`pact[_id].expiredPact <= block.timestamp`).
      * 2) Burns `_amount` from `_totalSupply[_id]`.
-     * 3) If the bond has enough tokens in `balancLoanRepay` to cover `sizeLoan * _amount`,
-     *    calls `_totaLiquidationForBondExpired` to repay fully.
+     * 3) If the pact has enough tokens in `balancLoanRepay` to cover `sizeLoan * _amount`,
+     *    calls `_totaLiquidationForPactExpired` to repay fully.
      * 4) If partially enough, repays as many as possible, then liquidates collateral for
-     *    the remainder. Points are subtracted from the issuer for the unpaid portion.
+     *    the remainder. Points are subtracted from the debtor for the unpaid portion.
      * 5) If there's not enough to pay any portion, fully liquidates the collateral to
      *    satisfy the claim.
      *
-     * @param _id     The ID of the bond being redeemed.
+     * @param _id     The ID of the pact being redeemed.
      * @param _user   The address claiming the loan repayment.
-     * @param _amount The quantity of bond tokens the user wants to redeem.
+     * @param _amount The quantity of pact tokens the user wants to redeem.
      */
     function _claimLoan(uint _id, address _user, uint _amount) internal {
-        Bond storage b = bond[_id];
+        Pact storage b = pact[_id];
         if (numberOfLiquidations[_id] <= 4) {
-            require(b.expiredBond <= block.timestamp, "Bond not be expirer");
+            require(b.expiredPact <= block.timestamp, "Pact not be expirer");
         }
         require(_amount <= _totalSupply[_id], "Amount exceeds total supply");
 
-        // Burn the redeemed bond tokens from total supply
+        // Burn the redeemed pact tokens from total supply
         _totalSupply[_id] -= _amount;
 
         // 1) Check if full repayment is possible: sizeLoan * _amount <= balancLoanRepay
         if (b.sizeLoan * _amount <= b.balancLoanRepay) {
-            _totaLiquidationForBondExpired(_id, _user, _amount);
+            _totaLiquidationForPactExpired(_id, _user, _amount);
         }
         // 2) Check if partially enough: sizeLoan <= balancLoanRepay
         else if (b.sizeLoan <= b.balancLoanRepay) {
@@ -950,13 +950,13 @@ contract BondContract is
             uint capCanPay = b.balancLoanRepay / b.sizeLoan;
 
             // Subtract points for any portion that can't be paid in full
-            _subtractionPrizePoin(_id, b.issuer, (_amount - capCanPay));
+            _subtractionPrizePoin(_id, b.debtor, (_amount - capCanPay));
 
             // Repay the portion we can pay
-            _totaLiquidationForBondExpired(_id, _user, capCanPay);
+            _totaLiquidationForPactExpired(_id, _user, capCanPay);
 
             // Liquidate collateral for the remainder
-            _liquitationCollateralForBondExpired(
+            _liquitationCollateralForPactExpired(
                 _id,
                 _user,
                 (_amount - capCanPay)
@@ -964,216 +964,216 @@ contract BondContract is
         }
         // 3) Not enough to cover even one token -> full collateral liquidation
         else {
-            _subtractionPrizePoin(_id, b.issuer, _amount);
-            _liquitationCollateralForBondExpired(_id, _user, _amount);
+            _subtractionPrizePoin(_id, b.debtor, _amount);
+            _liquitationCollateralForPactExpired(_id, _user, _amount);
         }
     }
 
     /**
      * @dev Handles a partial liquidation when there is not enough balance to cover
-     *      all coupon claims for a given multiplier (`_moltiplicator`).
+     *      all scheduled reward claims for a given multiplier (`_moltiplicator`).
      *
      * Steps:
-     *  1) Calculate how many coupons can actually be paid based on the current `balancLoanRepay`.
-     *  2) Transfer that partial amount to `_user`, minus a coupon fee.
-     *  3) Subtract a portion of score points from the issuer to reflect partial default.
-     *  4) Trigger `_executeLiquidationCoupon` to handle collateral liquidation, if any.
+     *  1) Calculate how many rewards can actually be paid based on the current `balancLoanRepay`.
+     *  2) Transfer that partial amount to `_user`, minus a scheduled reward fee.
+     *  3) Subtract a portion of score points from the debtor to reflect partial default.
+     *  4) Trigger `_executeLiquidationReward` to handle collateral liquidation, if any.
      *
-     * @param _id             The ID of the bond being partially liquidated.
-     * @param _user           The address claiming the coupon.
-     * @param _moltiplicator  The amount of coupons (or multiplier of interest) requested.
+     * @param _id             The ID of the pact being partially liquidated.
+     * @param _user           The address claiming the scheduled reward.
+     * @param _moltiplicator  The amount of rewards (or multiplier of interest) requested.
      */
-    function _parzialLiquidationCoupon(
+    function _parzialLiquidationReward(
         uint _id,
         address _user,
         uint _moltiplicator
     ) internal {
-        Bond storage b = bond[_id];
-        uint couponCanRepay = b.balancLoanRepay / b.interest;
+        Pact storage b = pact[_id];
+        uint rewardCanRepay = b.balancLoanRepay / b.interest;
 
-        // Actual token amount to pay = number of coupons we can cover * interest
-        uint qtaToCouponClaim = couponCanRepay * b.interest;
+        // Actual token amount to pay = number of rewards we can cover * interest
+        uint qtaToRewardClaim = rewardCanRepay * b.interest;
 
         // Reduce the repay balance accordingly
-        b.balancLoanRepay -= qtaToCouponClaim;
+        b.balancLoanRepay -= qtaToRewardClaim;
 
-        // Transfer to the user the partial coupon, minus a coupon fee
+        // Transfer to the user the partial scheduled reward, minus a scheduled reward fee
         SafeERC20.safeTransfer(
             IERC20(b.tokenLoan),
             _user,
-            qtaToCouponClaim - _couponFee(b.tokenLoan, qtaToCouponClaim)
+            qtaToRewardClaim - _couponFee(b.tokenLoan, qtaToRewardClaim)
         );
 
-        // Emit an event indicating a partial coupon claim
-        emit CouponClaimed(_user, _id, _moltiplicator);
+        // Emit an event indicating a partial scheduled reward claim
+        emit RewardClaimed(_user, _id, _moltiplicator);
 
-        // Subtract prize points from the issuer for failing to pay all requested coupons
-        _subtractionPrizePoin(_id, b.issuer, (_moltiplicator - couponCanRepay));
+        // Subtract prize points from the debtor for failing to pay all requested rewards
+        _subtractionPrizePoin(_id, b.debtor, (_moltiplicator - rewardCanRepay));
 
-        // Execute liquidation on remaining unpaid coupons (collateral usage)
-        _executeLiquidationCoupon(_id, _user, _moltiplicator - couponCanRepay);
+        // Execute liquidation on remaining unpaid rewards (collateral usage)
+        _executeLiquidationReward(_id, _user, _moltiplicator - rewardCanRepay);
     }
 
     /**
-     * @dev Executes the liquidation of coupons (and potentially the bond) when the issuer
-     *      cannot fully repay the owed coupons. Each liquidation increments `numberOfLiquidations[_id]`.
+     * @dev Executes the liquidation of rewards (and potentially the pact) when the debtor
+     *      cannot fully repay the owed rewards. Each liquidation increments `numberOfLiquidations[_id]`.
      *      Depending on how many times liquidation has happened, different penalty tiers or logic apply.
      *
      *  - If this is the 1st liquidation (numberOfLiquidations[_id] == 1),
-     *    calls `_logicExecuteLiquidationCoupon` with index 0.
-     *  - If it's the 2nd, calls `_logicExecuteLiquidationCoupon` with index 1.
-     *  - If it's the 3rd, calls `_logicExecuteLiquidationCoupon` with index 2.
-     *  - If it's the 4th, fully liquidates the bond by calling `_logicExecuteLiquidationBond`.
+     *    calls `_logicExecuteLiquidationReward` with index 0.
+     *  - If it's the 2nd, calls `_logicExecuteLiquidationReward` with index 1.
+     *  - If it's the 3rd, calls `_logicExecuteLiquidationReward` with index 2.
+     *  - If it's the 4th, fully liquidates the pact by calling `_logicExecuteLiquidationPact`.
      *
-     * @param _id             The ID of the bond being liquidated.
-     * @param _user           The address claiming the coupon (and triggering liquidation).
-     * @param _moltiplicator  The requested amount of coupons that couldn't be fully paid.
+     * @param _id             The ID of the pact being liquidated.
+     * @param _user           The address claiming the scheduled reward (and triggering liquidation).
+     * @param _moltiplicator  The requested amount of rewards that couldn't be fully paid.
      */
-    function _executeLiquidationCoupon(
+    function _executeLiquidationReward(
         uint _id,
         address _user,
         uint _moltiplicator
     ) internal {
         // Cattura in locale il numero di liquidazioni per evitare più SLOAD
         uint8 n = numberOfLiquidations[_id];
-        require(n <= 4, "This bond is expired or totally liquidated");
+        require(n <= 4, "This pact is expired or totally liquidated");
         n++;
         numberOfLiquidations[_id] = n;
         if (n < 4) {
-            _logicExecuteLiquidationCoupon(_id, n - 1, _moltiplicator, _user);
+            _logicExecuteLiquidationReward(_id, n - 1, _moltiplicator, _user);
         } else {
-            _logicExecuteLiquidationBond(_id, _moltiplicator, _user);
+            _logicExecuteLiquidationPact(_id, _moltiplicator, _user);
         }
     }
 
     /**
-     * @dev Partially liquidates the bond's collateral for a specific coupon liquidation event.
-     *      Applies a penalty based on the issuer's penalty tier (`_indexPenality`) and the user's claim multiplier.
+     * @dev Partially liquidates the pact's collateral for a specific scheduled reward liquidation event.
+     *      Applies a penalty based on the debtor's penalty tier (`_indexPenality`) and the user's claim multiplier.
      *
      * Steps:
-     *  1) Calculate the percentage of collateral to liquidate, using the issuer’s penalty rates stored in ConditionOfFee.
+     *  1) Calculate the percentage of collateral to liquidate, using the debtor’s penalty rates stored in ConditionOfFee.
      *  2) Deduct a liquidation fee from that portion.
      *  3) Transfer the remaining collateral to `_user`.
-     *  4) Emit a `LiquidationCoupon` event.
+     *  4) Emit a `LiquidationReward` event.
      *
-     * @param _id             The ID of the bond being liquidated.
+     * @param _id             The ID of the pact being liquidated.
      * @param _indexPenality  The index into the penalityForLiquidation array (0, 1, or 2), determining the penalty rate.
-     * @param _moltiplicator  The number of coupons (or equivalent multiplier) still due.
-     * @param _user           The address receiving collateral in lieu of full coupon payment.
+     * @param _moltiplicator  The number of rewards (or equivalent multiplier) still due.
+     * @param _user           The address receiving collateral in lieu of full scheduled reward payment.
      */
-    function _logicExecuteLiquidationCoupon(
+    function _logicExecuteLiquidationReward(
         uint _id,
         uint _indexPenality,
         uint _moltiplicator,
         address _user
     ) internal {
-        Bond storage b = bond[_id];
+        Pact storage b = pact[_id];
         // Calculate collateral portion to be liquidated based on penalty
         uint percCollateralOfLiquidation = (b.collateral *
-            conditionOfFee[b.issuer].penalityForLiquidation[_indexPenality]) /
+            conditionOfFee[b.debtor].penalityForLiquidation[_indexPenality]) /
             10000;
 
-        // Divide that portion by total bond amount to get per-token collateral, then multiply by _moltiplicator
-        uint percForCoupon = percCollateralOfLiquidation / b.amount;
+        // Divide that portion by total pact amount to get per-token collateral, then multiply by _moltiplicator
+        uint percForReward = percCollateralOfLiquidation / b.amount;
 
         // Calculate the liquidation fee on the portion being transferred
         uint fee = _liquidationFee(
-            b.issuer,
+            b.debtor,
             b.tokenCollateral,
-            (percForCoupon * _moltiplicator)
+            (percForReward * _moltiplicator)
         );
 
-        // Reduce bond collateral by net amount (collateral minus fee)
-        b.collateral -= (percForCoupon * _moltiplicator) - fee;
+        // Reduce pact collateral by net amount (collateral minus fee)
+        b.collateral -= (percForReward * _moltiplicator) - fee;
 
         // Transfer the net collateral to the user
         SafeERC20.safeTransfer(
             IERC20(b.tokenCollateral),
             _user,
-            (percForCoupon * _moltiplicator) - fee
+            (percForReward * _moltiplicator) - fee
         );
-        emit LiquidationCoupon(_user, _id, _moltiplicator);
+        emit LiquidationReward(_user, _id, _moltiplicator);
     }
 
     /**
-     * @dev Fully or substantially liquidates the bond collateral, typically on the 4th liquidation event.
-     *      The issuer loses all remaining relevant points (`_lostPoint`), and the user receives
+     * @dev Fully or substantially liquidates the pact collateral, typically on the 4th liquidation event.
+     *      The debtor loses all remaining relevant points (`_lostPoint`), and the user receives
      *      the per-token collateral for their `_moltiplicator`.
      *
-     * @param _id            The ID of the bond being fully liquidated.
-     * @param _moltiplicator The number of bond tokens or coupon multiplier the user is claiming.
+     * @param _id            The ID of the pact being fully liquidated.
+     * @param _moltiplicator The number of pact tokens or scheduled reward multiplier the user is claiming.
      * @param _user          The address receiving the final collateral portion.
      */
-    function _logicExecuteLiquidationBond(
+    function _logicExecuteLiquidationPact(
         uint _id,
         uint _moltiplicator,
         address _user
     ) internal {
-        Bond storage b = bond[_id];
-        // The issuer loses all prize points for this bond
-        _lostPoint(_id, b.issuer);
+        Pact storage b = pact[_id];
+        // The debtor loses all prize points for this pact
+        _lostPoint(_id, b.debtor);
 
         // Increment the liquidation counter
         numberOfLiquidations[_id] += 1;
 
         // Calculate collateral per token and transfer it to the user
-        uint percForCoupon = b.collateral / b.amount;
-        b.collateral -= percForCoupon * _moltiplicator;
+        uint percForReward = b.collateral / b.amount;
+        b.collateral -= percForReward * _moltiplicator;
         SafeERC20.safeTransfer(
             IERC20(b.tokenCollateral),
             _user,
-            percForCoupon * _moltiplicator
+            percForReward * _moltiplicator
         );
 
-        // Emit an event for the bond liquidation
-        emit LiquidationBond(_id, _moltiplicator);
+        // Emit an event for the pact liquidation
+        emit LiquidationPact(_id, _moltiplicator);
     }
 
     /**
-     * @dev Executes collateral liquidation for a bond that has expired,
+     * @dev Executes collateral liquidation for a pact that has expired,
      *      when the loan repayment balance is insufficient.
-     *      The user redeems `_amount` of bond tokens,
+     *      The user redeems `_amount` of pact tokens,
      *      and receives an equivalent portion of collateral minus any liquidation fee.
      *
      * Steps:
      *  1) Increments the `freezCollateral[_id]` if it's the first time collateral is frozen.
-     *  2) Calculates the per-bond-token collateral share (`collateral / bond[_id].amount`).
+     *  2) Calculates the per-pact-token collateral share (`collateral / pact[_id].amount`).
      *  3) Applies a liquidation fee on the portion being redeemed.
-     *  4) Reduces the bond’s total collateral, updates coupon ownership,
+     *  4) Reduces the pact’s total collateral, updates scheduled reward ownership,
      *     and burns `_amount` from the user's balance.
      *  5) Transfers the net collateral to `_user`.
-     *  6) Emits a `LiquitationCollateralBondExpired` event.
+     *  6) Emits a `LiquitationCollateralPactExpired` event.
      *
-     * @param _id     The ID of the bond to liquidate.
-     * @param _user   The address redeeming the bond tokens.
-     * @param _amount The quantity of bond tokens being redeemed.
+     * @param _id     The ID of the pact to liquidate.
+     * @param _user   The address redeeming the pact tokens.
+     * @param _amount The quantity of pact tokens being redeemed.
      */
-    function _liquitationCollateralForBondExpired(
+    function _liquitationCollateralForPactExpired(
         uint _id,
         address _user,
         uint _amount
     ) internal {
-        // If not previously frozen, freeze the collateral for this bond
-        Bond storage b = bond[_id];
+        // If not previously frozen, freeze the collateral for this pact
+        Pact storage b = pact[_id];
         if (freezCollateral[_id] == 0) {
             freezCollateral[_id] += 1;
             liquidationFactor[_id] = b.collateral / b.amount;
         }
 
         // Calculate the per-token share of the collateral
-        //uint collateralToLiquidate = bond[_id].collateral / bond[_id].amount;
+        //uint collateralToLiquidate = pact[_id].collateral / pact[_id].amount;
         // Compute liquidation fee on the portion being redeemed
         uint fee = _liquidationFee(
-            b.issuer,
+            b.debtor,
             b.tokenLoan,
             (liquidationFactor[_id] * _amount)
         );
 
-        // Update bond's collateral (subtract the portion plus fee)
+        // Update pact's collateral (subtract the portion plus fee)
         b.collateral -= (liquidationFactor[_id] * _amount); // + fee;
 
-        // Remove coupon entitlements and burn the redeemed bond tokens
-        _upDateCouponSell(_id, _user, _amount);
+        // Remove scheduled reward entitlements and burn the redeemed pact tokens
+        _upDateRewardSell(_id, _user, _amount);
         _burn(_user, _id, _amount);
 
         // Transfer the net collateral to the user
@@ -1184,33 +1184,33 @@ contract BondContract is
         );
 
         // Emit event indicating collateral liquidation
-        emit LiquitationCollateralBondExpired(_user, _id, _amount);
+        emit LiquitationCollateralPactExpired(_user, _id, _amount);
     }
 
     /**
-     * @dev Performs the full repayment of a bond after its expiry, using the available `balancLoanRepay`.
+     * @dev Performs the full repayment of a pact after its expiry, using the available `balancLoanRepay`.
      *      1) Calculates the total token amount to transfer (`sizeLoan * _amount`).
      *      2) Decrements `balancLoanRepay` by that amount.
-     *      3) Updates coupon ownership, burns the bond tokens, and transfers the repaid amount (minus fees).
+     *      3) Updates scheduled reward ownership, burns the pact tokens, and transfers the repaid amount (minus fees).
      *      4) Emits a `LoanClaimed` event.
      *
-     * @param _id     The ID of the bond being liquidated.
+     * @param _id     The ID of the pact being liquidated.
      * @param _user   The address redeeming the loan.
-     * @param _amount The number of bond tokens redeemed.
+     * @param _amount The number of pact tokens redeemed.
      */
-    function _totaLiquidationForBondExpired(
+    function _totaLiquidationForPactExpired(
         uint _id,
         address _user,
         uint _amount
     ) internal {
-        Bond storage b = bond[_id];
-        // Calculate total tokens to transfer based on the amount of bond tokens redeemed
+        Pact storage b = pact[_id];
+        // Calculate total tokens to transfer based on the amount of pact tokens redeemed
         uint valueTokenTransfer = b.sizeLoan * _amount;
-        // Reduce the bond’s repay balance by the total repayment amount
+        // Reduce the pact’s repay balance by the total repayment amount
         b.balancLoanRepay -= b.sizeLoan * _amount;
 
-        // Update coupons and burn the redeemed bond tokens
-        _upDateCouponSell(_id, _user, _amount);
+        // Update rewards and burn the redeemed pact tokens
+        _upDateRewardSell(_id, _user, _amount);
         _burn(_user, _id, _amount);
 
         // Transfer the repayment tokens (minus liquidation fee) to the user
@@ -1218,52 +1218,52 @@ contract BondContract is
             (IERC20(b.tokenLoan)),
             _user,
             valueTokenTransfer -
-                _liquidationFee(b.issuer, b.tokenLoan, valueTokenTransfer)
+                _liquidationFee(b.debtor, b.tokenLoan, valueTokenTransfer)
         );
         // Emit event for successful loan claim
         emit LoanClaimed(_user, _id, _amount);
     }
 
     /**
-     * @dev Allows the issuer to withdraw all collateral after the bond expires.
+     * @dev Allows the debtor to withdraw all collateral after the pact expires.
      *      - If `freezCollateral[_id]` is nonzero, a 90-day lock is enforced.
      *      - Otherwise, a standard 15-day lock applies.
-     *      - Once the lock period is over, transfers any remaining collateral back to the issuer.
+     *      - Once the lock period is over, transfers any remaining collateral back to the debtor.
      *      - Emits a `CollateralWithdrawn` event.
      *
-     * @param _id      The ID of the bond from which to withdraw collateral.
-     * @param _issuer  The bond issuer receiving the collateral.
+     * @param _id      The ID of the pact from which to withdraw collateral.
+     * @param _debtor  The pact debtor receiving the collateral.
      */
-    function _withdrawCollateral(uint _id, address _issuer) internal {
-        // If collateral was previously frozen, wait 90 days past bond expiry
-        Bond storage b = bond[_id];
+    function _withdrawCollateral(uint _id, address _debtor) internal {
+        // If collateral was previously frozen, wait 90 days past pact expiry
+        Pact storage b = pact[_id];
         if (freezCollateral[_id] != 0) {
             require(
-                b.expiredBond + (90 * (1 days)) <= block.timestamp,
+                b.expiredPact + (90 * (1 days)) <= block.timestamp,
                 "the collateral lock-up period has not yet expired, extended to 90 days for liquidation"
             );
         } else {
             // Otherwise, a standard 15-day lock after expiry
             require(
-                b.expiredBond + (15 * (1 days)) <= block.timestamp,
+                b.expiredPact + (15 * (1 days)) <= block.timestamp,
                 "the collateral lock-up period has not yet expired"
             );
         }
-        // Transfer any remaining collateral to the issuer
+        // Transfer any remaining collateral to the debtor
         uint amountCollateral = b.collateral;
         b.collateral = 0;
 
         SafeERC20.safeTransfer(
             IERC20(b.tokenCollateral),
-            _issuer,
+            _debtor,
             amountCollateral
         );
 
-        emit CollateralWithdrawn(_issuer, _id, amountCollateral);
+        emit CollateralWithdrawn(_debtor, _id, amountCollateral);
     }
 
     /**
-     * @dev Assigns initial “prize points” (score-based rewards) to the bond issuer
+     * @dev Assigns initial “prize points” (score-based rewards) to the pact debtor
      *      based on the total size of the loan (`_sizeLoan`). Larger loans yield
      *      higher multipliers on `_amount`.
      *
@@ -1274,14 +1274,14 @@ contract BondContract is
      *  - If sizeLoan is in [1e22, 1e23), multiply by 50
      *  - If sizeLoan >= 1e23, multiply by 70
      *
-     * @param _id        The bond ID to which points are assigned.
-     * @param _issuer    The issuer's address receiving the prize points.
-     * @param _amount    The total supply of bond tokens created.
+     * @param _id        The pact ID to which points are assigned.
+     * @param _debtor    The debtor's address receiving the prize points.
+     * @param _amount    The total supply of pact tokens created.
      * @param _sizeLoan  The total loan amount requested (in token units).
      */
     function _setInitialPrizePoint(
         uint _id,
-        address _issuer,
+        address _debtor,
         uint _amount,
         uint _sizeLoan
     ) internal {
@@ -1301,12 +1301,12 @@ contract BondContract is
         } else {
             newScore = 0; // Se _sizeLoan non soddisfa nessuna condizione, opzionale
         }
-        prizeScore[_id][_issuer] = newScore;
+        prizeScore[_id][_debtor] = newScore;
     }
 
     /**
      * @dev Updates or initializes the user's scoring and penalty conditions.
-     *      Called (for example) when a new bond is created or certain conditions change.
+     *      Called (for example) when a new pact is created or certain conditions change.
      *
      * Logic overview:
      *  - If the user is new (score == 0) or in the "medium" range [700k, 1M], set a base score of 700k
@@ -1356,7 +1356,7 @@ contract BondContract is
     }
 
     /**
-     * @dev Subtracts prize points from the issuer’s balance when the bond issuer fails
+     * @dev Subtracts prize points from the debtor’s balance when the pact debtor fails
      *      to meet certain obligations. The amount subtracted depends on both the loan size
      *      and a specific multiplier factor.
      *
@@ -1364,159 +1364,159 @@ contract BondContract is
      *  - For each range of `sizeLoan`, we call `_chekPointIsnZeri` with a different factor.
      *  - The factor determines how many points get subtracted from `prizeScore` per unit `_amount`.
      *
-     * @param _id      The ID of the bond from which points are subtracted.
-     * @param _issuer  The address of the bond issuer losing points.
+     * @param _id      The ID of the pact from which points are subtracted.
+     * @param _debtor  The address of the pact debtor losing points.
      * @param _amount  The base amount used in calculating how many points to subtract.
      */
     function _subtractionPrizePoin(
         uint _id,
-        address _issuer,
+        address _debtor,
         uint _amount
     ) internal {
-        Bond storage b = bond[_id];
+        Pact storage b = pact[_id];
         // Loan in [5e19, 1e20)
         if (b.sizeLoan >= 50e18 && b.sizeLoan < 100e18) {
-            _chekPointIsnZeri(_id, _issuer, _amount, 2);
+            _chekPointIsnZeri(_id, _debtor, _amount, 2);
         }
 
         // Loan in [1e20, 5e20)
         if (b.sizeLoan >= 100e18 && b.sizeLoan < 500e18) {
-            _chekPointIsnZeri(_id, _issuer, _amount, 5);
+            _chekPointIsnZeri(_id, _debtor, _amount, 5);
         }
 
         // Loan in [1e21, 5e21)
         if (b.sizeLoan >= 1000e18 && b.sizeLoan < 5000e18) {
-            _chekPointIsnZeri(_id, _issuer, _amount, 10);
+            _chekPointIsnZeri(_id, _debtor, _amount, 10);
         }
 
         // Loan in [5e21, 1e22)
         if (b.sizeLoan >= 5000e18 && b.sizeLoan < 1e22) {
-            _chekPointIsnZeri(_id, _issuer, _amount, 15);
+            _chekPointIsnZeri(_id, _debtor, _amount, 15);
         }
 
         // Loan in [1e22, 1e23)
         if (b.sizeLoan >= 1e22 && b.sizeLoan < 1e23) {
-            _chekPointIsnZeri(_id, _issuer, _amount, 25);
+            _chekPointIsnZeri(_id, _debtor, _amount, 25);
         }
 
         // Loan < 1e23
         if (b.sizeLoan < 1e23) {
-            _chekPointIsnZeri(_id, _issuer, _amount, 35);
+            _chekPointIsnZeri(_id, _debtor, _amount, 35);
         }
     }
 
     /**
-     * @dev Checks and subtracts the specified number of points from the issuer's prize score,
+     * @dev Checks and subtracts the specified number of points from the debtor's prize score,
      *      ensuring it doesn't go below zero.
      *
-     * - If `prizeScore[_id][_issuer]` is at least `_amount * _points`, subtract that amount.
-     * - Otherwise, set the issuer's score to 0.
+     * - If `prizeScore[_id][_debtor]` is at least `_amount * _points`, subtract that amount.
+     * - Otherwise, set the debtor's score to 0.
      *
-     * @param _id      The bond ID for which the prize score is stored.
-     * @param _issuer  The address whose score is adjusted.
+     * @param _id      The pact ID for which the prize score is stored.
+     * @param _debtor  The address whose score is adjusted.
      * @param _amount  The base amount used in the calculation.
      * @param _points  The multiplier factor applied to `_amount` when subtracting points.
      */
     function _chekPointIsnZeri(
         uint _id,
-        address _issuer,
+        address _debtor,
         uint _amount,
         uint _points
     ) internal {
-        if (prizeScore[_id][_issuer] >= _amount * _points) {
-            prizeScore[_id][_issuer] -= _amount * _points;
+        if (prizeScore[_id][_debtor] >= _amount * _points) {
+            prizeScore[_id][_debtor] -= _amount * _points;
         } else {
-            prizeScore[_id][_issuer] = 0;
+            prizeScore[_id][_debtor] = 0;
         }
     }
 
     /**
-     * @dev Completely zeros out the issuer's prize score for a given bond ID.
+     * @dev Completely zeros out the debtor's prize score for a given pact ID.
      *      Typically called in severe default or full liquidation scenarios.
      *
-     * @param _id      The bond ID whose prize score is cleared.
-     * @param _issuer  The address whose score is set to zero.
+     * @param _id      The pact ID whose prize score is cleared.
+     * @param _debtor  The address whose score is set to zero.
      */
-    function _lostPoint(uint _id, address _issuer) internal {
-        prizeScore[_id][_issuer] = 0;
+    function _lostPoint(uint _id, address _debtor) internal {
+        prizeScore[_id][_debtor] = 0;
     }
 
     /**
-     * @dev Allows the issuer to claim a portion of their prize points based on how many bond tokens
+     * @dev Allows the debtor to claim a portion of their prize points based on how many pact tokens
      *      remain in circulation. Points can only be claimed if:
-     *        1) There is a non-zero balance of prizeScore left (`prizeScore[_id][_issuer] > 0`).
+     *        1) There is a non-zero balance of prizeScore left (`prizeScore[_id][_debtor] > 0`).
      *        2) The current supply percentage meets certain thresholds (10%, 25%, 50%).
      *
      * Logic summary:
-     *  - If the total supply of the bond is ≤ 10% of the original `bond[_id].amount`,
-     *    the issuer can claim all remaining points.
-     *  - If the total supply is ≤ 25% and the issuer has claimed < 75% so far, they can claim
+     *  - If the total supply of the pact is ≤ 10% of the original `pact[_id].amount`,
+     *    the debtor can claim all remaining points.
+     *  - If the total supply is ≤ 25% and the debtor has claimed < 75% so far, they can claim
      *    enough points to reach 75% total claimed.
-     *  - If the total supply is ≤ 50% and the issuer has claimed < 50% so far, they can claim
+     *  - If the total supply is ≤ 50% and the debtor has claimed < 50% so far, they can claim
      *    enough points to reach 50% total claimed.
      *
      * Steps:
-     *  1) Compute `totalPoints` as the sum of unclaimed (`prizeScore[_id][_issuer]`)
-     *     plus already claimed (`prizeScoreAlreadyClaim[_id][_issuer]`).
+     *  1) Compute `totalPoints` as the sum of unclaimed (`prizeScore[_id][_debtor]`)
+     *     plus already claimed (`prizeScoreAlreadyClaim[_id][_debtor]`).
      *  2) Depending on the threshold (10%, 25%, or 50%), calculate how many points can be claimed now.
-     *  3) Update `prizeScore[_id][_issuer]`, `prizeScoreAlreadyClaim[_id][_issuer]`,
-     *     and `conditionOfFee[_issuer].score` accordingly.
-     *  4) Adjust `claimedPercentage[_id][_issuer]` to reflect how much has now been claimed in total.
+     *  3) Update `prizeScore[_id][_debtor]`, `prizeScoreAlreadyClaim[_id][_debtor]`,
+     *     and `conditionOfFee[_debtor].score` accordingly.
+     *  4) Adjust `claimedPercentage[_id][_debtor]` to reflect how much has now been claimed in total.
      *  5) Emit a `ScoreUpdated` event with the amount of points claimed.
      *
-     * @param _id     The ID of the bond whose prize points are being claimed.
-     * @param _issuer The bond issuer claiming the points.
+     * @param _id     The ID of the pact whose prize points are being claimed.
+     * @param _debtor The pact debtor claiming the points.
      */
-    function _claimScorePoint(uint _id, address _issuer) internal {
-        // Check if the issuer has any points left to claim
-        require(prizeScore[_id][_issuer] > 0, "No points left to claim");
+    function _claimScorePoint(uint _id, address _debtor) internal {
+        // Check if the debtor has any points left to claim
+        require(prizeScore[_id][_debtor] > 0, "No points left to claim");
 
         // Total points = unclaimed + already claimed
-        uint totalPoints = prizeScore[_id][_issuer] +
-            prizeScoreAlreadyClaim[_id][_issuer];
+        uint totalPoints = prizeScore[_id][_debtor] +
+            prizeScoreAlreadyClaim[_id][_debtor];
 
         // 1) If the remaining supply is ≤ 10% of the original amount, claim all remaining points
-        if (_totalSupply[_id] <= bond[_id].amount / 10) {
-            uint score = prizeScore[_id][_issuer];
-            prizeScoreAlreadyClaim[_id][_issuer] += score;
-            prizeScore[_id][_issuer] = 0;
-            conditionOfFee[_issuer].score += score;
-            claimedPercentage[_id][_issuer] = uint8(100); // 100% claimed
-            emit ScoreUpdated(_issuer, score);
+        if (_totalSupply[_id] <= pact[_id].amount / 10) {
+            uint score = prizeScore[_id][_debtor];
+            prizeScoreAlreadyClaim[_id][_debtor] += score;
+            prizeScore[_id][_debtor] = 0;
+            conditionOfFee[_debtor].score += score;
+            claimedPercentage[_id][_debtor] = uint8(100); // 100% claimed
+            emit ScoreUpdated(_debtor, score);
 
-            // 2) If the remaining supply is ≤ 25%, the issuer can claim up to a total of 75%
+            // 2) If the remaining supply is ≤ 25%, the debtor can claim up to a total of 75%
         } else if (
-            _totalSupply[_id] <= bond[_id].amount / 4 &&
-            claimedPercentage[_id][_issuer] < 75
+            _totalSupply[_id] <= pact[_id].amount / 4 &&
+            claimedPercentage[_id][_debtor] < 75
         ) {
-            uint8 claimablePercentage = 75 - claimedPercentage[_id][_issuer];
+            uint8 claimablePercentage = 75 - claimedPercentage[_id][_debtor];
             uint score = (totalPoints * claimablePercentage) / 100;
-            prizeScoreAlreadyClaim[_id][_issuer] += score;
-            prizeScore[_id][_issuer] -= score;
-            conditionOfFee[_issuer].score += score;
-            claimedPercentage[_id][_issuer] += claimablePercentage;
-            emit ScoreUpdated(_issuer, score);
+            prizeScoreAlreadyClaim[_id][_debtor] += score;
+            prizeScore[_id][_debtor] -= score;
+            conditionOfFee[_debtor].score += score;
+            claimedPercentage[_id][_debtor] += claimablePercentage;
+            emit ScoreUpdated(_debtor, score);
 
-            // 3) If the remaining supply is ≤ 50%, the issuer can claim up to a total of 50%
+            // 3) If the remaining supply is ≤ 50%, the debtor can claim up to a total of 50%
         } else if (
-            _totalSupply[_id] <= bond[_id].amount / 2 &&
-            claimedPercentage[_id][_issuer] < 50
+            _totalSupply[_id] <= pact[_id].amount / 2 &&
+            claimedPercentage[_id][_debtor] < 50
         ) {
-            uint8 claimablePercentage = 50 - claimedPercentage[_id][_issuer];
+            uint8 claimablePercentage = 50 - claimedPercentage[_id][_debtor];
             uint score = (totalPoints * claimablePercentage) / 100;
-            prizeScoreAlreadyClaim[_id][_issuer] += score;
-            prizeScore[_id][_issuer] -= score;
-            conditionOfFee[_issuer].score += score;
-            claimedPercentage[_id][_issuer] += claimablePercentage;
-            emit ScoreUpdated(_issuer, score);
+            prizeScoreAlreadyClaim[_id][_debtor] += score;
+            prizeScore[_id][_debtor] -= score;
+            conditionOfFee[_debtor].score += score;
+            claimedPercentage[_id][_debtor] += claimablePercentage;
+            emit ScoreUpdated(_debtor, score);
         }
     }
 
     /**
-     * @dev Calculates and applies an issuance fee based on the issuer’s score.
+     * @dev Calculates and applies an issuance fee based on the debtor’s score.
      *      The fee is taken from the collateral amount `_amountCollateral` and deposited
      *      into the contract’s balance (`balanceContractFeesForToken`). The remainder
-     *      is kept as collateral for the bond.
+     *      is kept as collateral for the pact.
      *
      * Fee rates (in millesimal, i.e. “per thousand” or ‱):
      *  - score > 1,000,000 => 0.5% (5 millesimi)
@@ -1524,12 +1524,12 @@ contract BondContract is
      *  - 500,000 < score <= 700,000 => 3% (30 millesimi)
      *  - score <= 500,000 => 5% (50 millesimi)
      *
-     * @param _iusser          The address of the issuer.
+     * @param _iusser          The address of the debtor.
      * @param _tokenAddress    The ERC20 token used as collateral.
      * @param _amountCollateral The total collateral from which the fee is subtracted.
      * @return The actual fee amount deducted from `_amountCollateral`.
      */
-    function _emisionBondFee(
+    function _emisionPactFee(
         address _iusser,
         address _tokenAddress,
         uint _amountCollateral
@@ -1538,7 +1538,7 @@ contract BondContract is
         // High score, minimal fee
         if (score > 1000000) {
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     5
@@ -1547,7 +1547,7 @@ contract BondContract is
         // Medium-high score
         if (score > 700000 && score <= 1000000) {
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     15
@@ -1556,7 +1556,7 @@ contract BondContract is
         // Medium-low score
         if (score > 500000 && score <= 700000) {
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     30
@@ -1565,7 +1565,7 @@ contract BondContract is
         // Low score
         if (score <= 500000) {
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     50
@@ -1576,7 +1576,7 @@ contract BondContract is
     }
 
     /**
-     * @dev Calculates and updates the contract’s fee balance during a new bond emission.
+     * @dev Calculates and updates the contract’s fee balance during a new pact emission.
      *      1) Computes `(_amountCollateral * _fee) / 1000` as the actual fee to withhold.
      *      2) Increments `balanceContractFeesForToken[_tokenAddress]` by that amount.
      *      3) Emits `PaidFeeAtContract` event for transparency.
@@ -1586,7 +1586,7 @@ contract BondContract is
      * @param _fee              The fee rate in millesimal (e.g., 5 for 0.5%, 50 for 5%).
      * @return The actual fee amount after the division by 1000.
      */
-    function _updateBalanceContractForEmissionNewBond(
+    function _updateBalanceContractForMintNewPact(
         address _tokenAddress,
         uint _amountCollateral,
         uint16 _fee
@@ -1604,8 +1604,8 @@ contract BondContract is
     }
 
     /**
-     * @dev Calculates a liquidation fee during bond collateral liquidation based on
-     *      the issuer’s score, deducting a percentage of `_amountCollateral` and
+     * @dev Calculates a liquidation fee during pact collateral liquidation based on
+     *      the debtor’s score, deducting a percentage of `_amountCollateral` and
      *      transferring it to the contract’s fee balance.
      *
      * Fee tiers (in millesimal):
@@ -1614,7 +1614,7 @@ contract BondContract is
      *  - 500,000 < score <= 700,000 => 3% (30 per 1000)
      *  - score <= 500,000 => 5% (50 per 1000)
      *
-     * @param _iusser          The issuer’s address whose score determines the fee tier.
+     * @param _iusser          The debtor’s address whose score determines the fee tier.
      * @param _tokenAddress    The ERC20 token used for collateral.
      * @param _amountCollateral The portion of collateral on which the fee is charged.
      * @return The actual fee amount deducted and added to the contract’s fee balance.
@@ -1629,7 +1629,7 @@ contract BondContract is
 
         if (score > 1000000) {
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     LIQUIDATION_FEE[0]
@@ -1637,7 +1637,7 @@ contract BondContract is
         } else if (score > 700000) {
             // Implica che score <= 1000000
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     LIQUIDATION_FEE[1]
@@ -1645,7 +1645,7 @@ contract BondContract is
         } else if (score > 500000) {
             // Implica che score <= 700000
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     LIQUIDATION_FEE[2]
@@ -1653,7 +1653,7 @@ contract BondContract is
         } else {
             // score <= 500000
             return
-                _updateBalanceContractForEmissionNewBond(
+                _updateBalanceContractForMintNewPact(
                     _tokenAddress,
                     _amountCollateral,
                     LIQUIDATION_FEE[3]
@@ -1662,19 +1662,19 @@ contract BondContract is
     }
 
     /**
-     * @dev Applies a fixed coupon fee of 0.5% (represented as 50 millesimal in `_upDateBalanceUserFees`)
-     *      whenever a coupon is paid out. This fee is added to the contract’s fee balance.
+     * @dev Applies a fixed scheduled reward fee of 0.5% (represented as 50 millesimal in `_upDateBalanceUserFees`)
+     *      whenever a scheduled reward is paid out. This fee is added to the contract’s fee balance.
      *
-     * @param _tokenAddress The ERC20 token in which the coupon is paid.
-     * @param _amount       The coupon amount from which the fee is deducted.
+     * @param _tokenAddress The ERC20 token in which the scheduled reward is paid.
+     * @param _amount       The scheduled reward amount from which the fee is deducted.
      * @return The actual fee taken and added to `balanceContractFeesForToken`.
      */
     function _couponFee(
         address _tokenAddress,
         uint _amount
     ) internal returns (uint) {
-        // A fixed 0.5% fee on each coupon
-        return _upDateBalanceUserFees(_tokenAddress, _amount, COUPON_FEE);
+        // A fixed 0.5% fee on each scheduled reward
+        return _upDateBalanceUserFees(_tokenAddress, _amount, REWARD_FEE);
     }
 
     /**
@@ -1697,7 +1697,7 @@ contract BondContract is
      * @dev Updates the contract fee balance by adding `(_amount * _fee) / 1000`.
      *      (e.g. if _fee = 50, that's 5%. If _fee = 10, that's 1%.)
      *
-     * Note: The return value currently uses a 0.5% figure `((_amount * 5) / 1000)`,
+     * Pact: The return value currently uses a 0.5% figure `((_amount * 5) / 1000)`,
      *       which might differ from the actual `_fee` used in the balance update.
      *       Review this if you intend the return to match `_fee`.
      *
@@ -1718,23 +1718,23 @@ contract BondContract is
     //? VIEW & PURE FUNCTION
 
     /**
-     * @dev Calculates the maximum possible interest amount for a given bond.
-     * @param _id The bond ID for which the calculation is performed.
+     * @dev Calculates the maximum possible interest amount for a given pact.
+     * @param _id The pact ID for which the calculation is performed.
      * @return maxQtaInterest The total maximum interest that can be generated.
      *
      * Formula:
      * maxQtaInterest = (sizeLoan * (interest * number_of_coupons)) * totalSupply
      *
-     * - `sizeLoan`: The loan amount for the bond.
-     * - `interest`: Interest paid per coupon.
-     * - `couponMaturity.length`: Total number of coupons.
-     * - `totalSupply`: Total supply of bond tokens (ERC1155).
+     * - `sizeLoan`: The loan amount for the pact.
+     * - `interest`: Reward paid per scheduled reward.
+     * - `rewardMaturity.length`: Total number of rewards.
+     * - `totalSupply`: Total supply of pact tokens (ERC1155).
      *
-     * This function provides the upper limit of the total interest payout if all bond tokens are held and all coupons are claimed.
+     * This function provides the upper limit of the total interest payout if all pact tokens are held and all rewards are claimed.
      */
     function getMaxQtaInterest(uint _id) public view returns (uint) {
-        uint maxQtaInterest = (bond[_id].sizeLoan +
-            (bond[_id].interest * bond[_id].couponMaturity.length)) *
+        uint maxQtaInterest = (pact[_id].sizeLoan +
+            (pact[_id].interest * pact[_id].rewardMaturity.length)) *
             _totalSupply[_id];
         return maxQtaInterest;
     }
@@ -1747,7 +1747,7 @@ contract BondContract is
      * Before the first deposit, calling this function will return `0` since the value
      * has not yet been calculated.
      *
-     * @param _id The ID of the bond for which the remaining interest deposit is queried.
+     * @param _id The ID of the pact for which the remaining interest deposit is queried.
      * @return The remaining amount of tokens that can still be deposited for interest.
      */
     function getMissQtaInterest(uint _id) public view returns (uint) {
@@ -1797,28 +1797,28 @@ contract BondContract is
     }
 
     /**
-     * @dev Returns the current value of the incremental bond ID counter.
-     *      This indicates the ID that will be assigned to the next created bond.
+     * @dev Returns the current value of the incremental pact ID counter.
+     *      This indicates the ID that will be assigned to the next created pact.
      */
-    function viewBondID() public view returns (uint) {
-        return bondId;
+    function viewPactID() public view returns (uint) {
+        return pactId;
     }
 
     /**
-     * @dev Returns the total supply of a specific bond identified by its token ID.
-     * @param id The unique ID of the bond/token.
+     * @dev Returns the total supply of a specific pact identified by its token ID.
+     * @param id The unique ID of the pact/token.
      */
     function totalSupply(uint256 id) public view returns (uint256) {
         return _totalSupply[id];
     }
 
     /**
-     * @dev Returns the full details of a specific bond by its ID.
-     * @param _id The unique ID of the bond.
-     * @return Bond The full Bond struct containing all relevant data.
+     * @dev Returns the full details of a specific pact by its ID.
+     * @param _id The unique ID of the pact.
+     * @return Pact The full Pact struct containing all relevant data.
      */
-    function showDeatailBondForId(uint _id) public view returns (Bond memory) {
-        return bond[_id];
+    function showDeatailPactForId(uint _id) public view returns (Pact memory) {
+        return pact[_id];
     }
 
     /**
@@ -1848,12 +1848,12 @@ contract BondContract is
     }
 
     /**
-     * @dev Returns the current value of the coupon fee.
-     * @return The coupon fee set in the contract.
-     * @notice This function provides visibility into the current coupon fee configuration.
+     * @dev Returns the current value of the scheduled reward fee.
+     * @return The scheduled reward fee set in the contract.
+     * @notice This function provides visibility into the current scheduled reward fee configuration.
      */
     function showCouponFee() external view returns (uint) {
-        return COUPON_FEE;
+        return REWARD_FEE;
     }
 
     /**

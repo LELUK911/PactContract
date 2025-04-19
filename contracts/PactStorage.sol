@@ -1,30 +1,30 @@
 // SPDX-License-Identifier: Leluk911
 pragma solidity ^0.8.24;
 
-contract BondStorage {
+contract PactStorage {
     /**
-     * @dev This struct represents the core details of a bond:
-     * - id: a unique identifier assigned to each bond by the contract.
-     * - issuer: the address that creates (issues) the bond.
+     * @dev This struct represents the core details of a pact:
+     * - id: a unique identifier assigned to each pact by the contract.
+     * - debtor: the address that creates (issues) the pact.
      * - tokenLoan: the ERC20 token used to represent the principal of the loan.
-     * - sizeLoan: the total amount of the loan that the issuer is seeking.
-     * - interest: the interest rate or amount to be paid on the bond.
-     * - couponMaturity: an array of timestamps indicating when coupons (interest payments) mature.
-     * - expiredBond: the timestamp after which the bond is fully matured.
+     * - sizeLoan: the total amount of the loan that the debtor is seeking.
+     * - interest: the interest rate or amount to be paid on the pact.
+     * - rewardMaturity: an array of timestamps indicating when rewards (interest payments) mature.
+     * - expiredPact: the timestamp after which the pact is fully matured.
      * - tokenCollateral: the address of the token set aside as collateral.
-     * - collateral: the amount of collateral locked to secure the bond.
+     * - collateral: the amount of collateral locked to secure the pact.
      * - balancLoanRepay: how many tokens are available to repay the loan at any given time.
-     * - describes: a descriptive string providing extra bond details.
-     * - amount: the total supply of the bond token to be minted.
+     * - describes: a descriptive string providing extra pact details.
+     * - amount: the total supply of the pact token to be minted.
      */
-    struct Bond {
+    struct Pact {
         uint id;
-        address issuer;
+        address debtor;
         address tokenLoan;
         uint sizeLoan;
         uint interest;
-        uint64[] couponMaturity;
-        uint64 expiredBond;
+        uint64[] rewardMaturity;
+        uint64 expiredPact;
         address tokenCollateral;
         uint collateral;
         uint balancLoanRepay;
@@ -35,7 +35,7 @@ contract BondStorage {
     /**
      * @dev This struct defines custom conditions related to fees and penalties:
      * - penalityForLiquidation: an array with up to 3 penalty tiers applied upon liquidation events.
-     * - score: a rating or “trust score” for the issuer, influencing fee rates and penalties.
+     * - score: a rating or “trust score” for the debtor, influencing fee rates and penalties.
      */
     struct ConditionOfFee {
         uint16[3] penalityForLiquidation;
@@ -47,20 +47,20 @@ contract BondStorage {
      * - launcherContract: the official launch contract's address where the first transfer must go.
      * - transfertFee: the fixed fee (in WETH) for transfers, when both parties are outside the ecosystem.
      * - WHET: address of the WETH (or other ERC20) token used for fee payments.
-     * - MAX_COUPONS: Defines the maximum number of coupons allowed per bond
+     * - MAX_REWARDS: Defines the maximum number of rewards allowed per pact
      * - treasure: wallets abandon treasury functions
      *
-     * @dev bondId:
-     * - An incremental counter that uniquely identifies each bond.
-     * - Not controlled by users or issuers, ensuring the integrity of bond IDs.
+     * @dev pactId:
+     * - An incremental counter that uniquely identifies each pact.
+     * - Not controlled by users or issuers, ensuring the integrity of pact IDs.
      */
     address internal launcherContract;
     uint internal transfertFee;
     address internal WHET;
-    uint8 internal MAX_COUPONS;
+    uint8 internal MAX_REWARDS;
     address internal treasury;
-    uint internal bondId;
-    uint16 internal COUPON_FEE = 5;
+    uint internal pactId;
+    uint16 internal REWARD_FEE = 5;
     uint16[4] internal LIQUIDATION_FEE = [5, 15, 30, 50];
 
     // Case 1: new user or medium range
@@ -86,46 +86,46 @@ contract BondStorage {
     mapping(address => ConditionOfFee) internal conditionOfFee;
 
     /**
-     * @dev Maps a bond ID to the number of liquidation events that have occurred on that bond.
+     * @dev Maps a pact ID to the number of liquidation events that have occurred on that pact.
      */
     mapping(uint => uint8) internal numberOfLiquidations;
 
     /**
-     * @dev Tracks the total supply of each bond (ERC1155) identified by its token ID.
+     * @dev Tracks the total supply of each pact (ERC1155) identified by its token ID.
      */
     mapping(uint256 => uint256) internal _totalSupply;
 
     /**
-     * @dev Maps a bond ID to its detailed Bond struct, storing all bond information.
+     * @dev Maps a pact ID to its detailed Pact struct, storing all pact information.
      */
-    mapping(uint => Bond) internal bond;
+    mapping(uint => Pact) internal pact;
 
     /**
-     * @dev couponToClaim[bondId][userAddress][couponIndex] stores how many coupons
-     *      a given user can claim for a specific coupon index of a particular bond.
+     * @dev rewardToClaim[pactId][userAddress][rewardIndex] stores how many rewards
+     *      a given user can claim for a specific scheduled reward index of a particular pact.
      */
-    mapping(uint => mapping(address => mapping(uint => uint))) couponToClaim;
+    mapping(uint => mapping(address => mapping(uint => uint))) rewardToClaim;
 
     /**
-     * @dev Indicates if collateral is frozen for a given bond ID (e.g., when issuer is in default).
+     * @dev Indicates if collateral is frozen for a given pact ID (e.g., when debtor is in default).
      *      0 means not frozen; any non-zero value represents a freeze state.
      */
     mapping(uint => uint8) internal freezCollateral;
 
     /**
-     * @dev prizeScore[bondId][address] holds the number of “reward points” each address can earn for a bond.
+     * @dev prizeScore[pactId][address] holds the number of “reward points” each address can earn for a pact.
      */
     mapping(uint => mapping(address => uint)) internal prizeScore;
 
     /**
-     * @dev prizeScoreAlreadyClaim[bondId][address] indicates how many reward points have
-     *      already been claimed by an address for a given bond.
+     * @dev prizeScoreAlreadyClaim[pactId][address] indicates how many reward points have
+     *      already been claimed by an address for a given pact.
      */
     mapping(uint => mapping(address => uint)) internal prizeScoreAlreadyClaim;
 
     /**
-     * @dev claimedPercentage[bondId][address] tracks the percentage (out of 100) of
-     *      reward points claimed by an address for a given bond.
+     * @dev claimedPercentage[pactId][address] tracks the percentage (out of 100) of
+     *      reward points claimed by an address for a given pact.
      */
     mapping(uint => mapping(address => uint8)) internal claimedPercentage;
 
@@ -136,7 +136,7 @@ contract BondStorage {
     mapping(address => bool) internal ecosistemAddress;
 
     /**
-     * @dev firstTransfer[bondId] indicates whether the next transfer for a bond must go
+     * @dev firstTransfer[pactId] indicates whether the next transfer for a pact must go
      *      to the launcher contract (enforcing a “first transfer” rule).
      */
     mapping(uint => bool) internal firstTransfer;
@@ -149,22 +149,22 @@ contract BondStorage {
     mapping(address => uint) internal balanceContractFeesForToken;
 
     /**
-     * @dev Tracks the per-bond collateral liquidation factor.
+     * @dev Tracks the per-pact collateral liquidation factor.
      *
      * This mapping stores the calculated collateral amount per token unit
      * in case of liquidation. It is set only when the first liquidation
-     * event occurs for a bond and remains fixed for subsequent liquidations.
+     * event occurs for a pact and remains fixed for subsequent liquidations.
      *
      * Key Use Case:
-     * - Helps determine how much collateral each bond unit is worth during liquidation.
+     * - Helps determine how much collateral each pact unit is worth during liquidation.
      */
     mapping(uint => uint) internal liquidationFactor;
 
     /**
-     * @dev Stores the maximum allowable interest deposit for each bond.
+     * @dev Stores the maximum allowable interest deposit for each pact.
      *
      * This value is calculated only after the first deposit of interest tokens
-     * and represents the total amount that can be deposited throughout the bond's lifecycle.
+     * and represents the total amount that can be deposited throughout the pact's lifecycle.
      *
      * Key Use Case:
      * - Prevents over-depositing beyond the required interest payments.
@@ -172,7 +172,7 @@ contract BondStorage {
     mapping(uint => uint) internal maxInterestDeposit;
 
     /**
-     * @dev Indicates whether the interest deposit window for a bond is closed.
+     * @dev Indicates whether the interest deposit window for a pact is closed.
      *
      * This flag is set to `true` once the maximum required interest deposit has been reached,
      * ensuring that no further deposits can be made.
@@ -183,7 +183,7 @@ contract BondStorage {
     mapping(uint => bool) internal depositIsClose;
 
 
-    address immutable internal IHelperBondAddres;
+    address immutable internal IHelperPactAddres;
 
 
 

@@ -8,12 +8,12 @@ const main = async () => {
     const owner = new ethers.Wallet(process.env.PRIVATE_KEY, provider)
 
 
-    const BondContractFactory = await ethers.getContractFactory("BondContract");
-    const bondContract = await BondContractFactory.connect(owner).deploy(owner.address)
-    await bondContract.waitForDeployment()
-    const bondContractAddress = await bondContract.getAddress()
+    const BondContractFactory = await ethers.getContractFactory("PactContract");
+    const pactContract = await BondContractFactory.connect(owner).deploy(owner.address)
+    await pactContract.waitForDeployment()
+    const bondContractAddress = await pactContract.getAddress()
 
-    const LaunchBondContract = await ethers.getContractFactory('BondLaunch')
+    const LaunchBondContract = await ethers.getContractFactory('PactLaunch')
     const launchBondContract = await LaunchBondContract.connect(owner).deploy(bondContractAddress)
     await launchBondContract.waitForDeployment()
     const launchBondContractAddress = await launchBondContract.getAddress()
@@ -69,15 +69,15 @@ const main = async () => {
     const downwardAuctionContractAddress = await downwardAuctionContract.getAddress()
     await downwardAuctionContract.connect(owner).setFeeSeller(_echelons, _fees)
 
-    //? set preliminar variable BondContract
-    await bondContract.connect(owner).setMAX_COUPONS('6')
-    await bondContract.connect(owner).setTransfertFee(ethers.parseUnits('0.01'))
-    await bondContract.connect(owner).setlauncherContract(launchBondContractAddress)
-    await bondContract.connect(owner).setlauncherContract(launchBondContractAddress)
-    await bondContract.connect(owner).setWETHaddress(WETHaddress)
-    await bondContract.connect(owner).setTreasuryAddress(owner.address) // Uguale all'owner per comodità nei test
-    await bondContract.connect(owner).setEcosistemAddress(upwardAuctionContractAddress, true)
-    await bondContract.connect(owner).setEcosistemAddress(downwardAuctionContractAddress, true)
+    //? set preliminar variable PactContract
+    await pactContract.connect(owner).setMAX_COUPONS('6')
+    await pactContract.connect(owner).setTransfertFee(ethers.parseUnits('0.01'))
+    await pactContract.connect(owner).setlauncherContract(launchBondContractAddress)
+    await pactContract.connect(owner).setlauncherContract(launchBondContractAddress)
+    await pactContract.connect(owner).setWETHaddress(WETHaddress)
+    await pactContract.connect(owner).setTreasuryAddress(owner.address) // Uguale all'owner per comodità nei test
+    await pactContract.connect(owner).setEcosistemAddress(upwardAuctionContractAddress, true)
+    await pactContract.connect(owner).setEcosistemAddress(downwardAuctionContractAddress, true)
 
     await upwardAuctionContract.connect(owner).setCoolDown(3)
     await downwardAuctionContract.connect(owner).setCoolDown(3)
@@ -88,19 +88,19 @@ const main = async () => {
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${bondContractAddress}`)
+    console.log(`Pact contract -> ${bondContractAddress}`)
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${launchBondContractAddress}`)
+    console.log(`Pact contract -> ${launchBondContractAddress}`)
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${upwardAuctionContractAddress}`)
+    console.log(`Pact contract -> ${upwardAuctionContractAddress}`)
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${downwardAuction}`)
+    console.log(`Pact contract -> ${downwardAuction}`)
     console.log(``)
     console.log(``)
 

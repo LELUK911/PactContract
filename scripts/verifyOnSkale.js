@@ -7,7 +7,7 @@ const SKALE_EXPLORER_URL = "https://juicy-low-small-testnet.explorer.testnet.ska
 async function main() {
     const owner = "0x9E157eD74a826D93318F2a3669917A1fC827358d";
 
-    const bond = '0x9Ed2C7a27CD28952E79d0d2c5959695608E30eD8'
+    const pact = '0x9Ed2C7a27CD28952E79d0d2c5959695608E30eD8'
     const forge = '0x58656c977f96954eD2935Ba35266F1fdA7aeDFcc'
     const rise = '0xF83d5825BCb3767f508D3442e022D10d402d3032'
     const fall = '0x213683E24830414527c4f825B28A5aBc7857D468'
@@ -15,23 +15,23 @@ async function main() {
     const mWETH = '0x5FbDB2315678afecb367f032d93F642f64180aa3'
     const mBTC = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D'
 
-    // Verifica Iron Bond
+    // Verifica Iron Pact
     try {
         await run("verify:verify", {
-            address: bond,
+            address: pact,
             constructorArguments: [owner],
             network: "skaleTesnet" // Specifica la rete SKALE
         });
-        console.log(`✅ Iron Bond verified: ${SKALE_EXPLORER_URL}/${bond}`);
+        console.log(`✅ Iron Pact verified: ${SKALE_EXPLORER_URL}/${pact}`);
     } catch (error) {
-        console.error("❌ Iron Bond verification failed:", error.message);
+        console.error("❌ Iron Pact verification failed:", error.message);
     }
 
     // Verifica Iron Forge
     try {
         await run("verify:verify", {
             address: forge,
-            constructorArguments: [bond],
+            constructorArguments: [pact],
             network: "skaleTesnet"
         });
         console.log(`✅ Iron Forge verified: ${SKALE_EXPLORER_URL}/${forge}`);
@@ -44,7 +44,7 @@ async function main() {
         await run("verify:verify", {
             address: rise,
             constructorArguments: [
-                bond,
+                pact,
                 mdai,
                 ethers.parseUnits('1'),
                 ethers.parseUnits('1000'),
@@ -62,7 +62,7 @@ async function main() {
         await run("verify:verify", {
             address: fall,
             constructorArguments: [
-                bond,
+                pact,
                 mdai,
                 ethers.parseUnits('1'),
                 ethers.parseUnits('1000'),

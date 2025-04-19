@@ -2,15 +2,15 @@
 pragma solidity ^0.8.24;
 
 interface IBondContract {
-    struct Bond {
+    struct Pact {
         uint id;
-        address issuer;
+        address debtor;
         address tokenLoan;
         uint sizeLoan;
         uint interest;
-        uint[] couponMaturity;
+        uint[] rewardMaturity;
         //uint numberOfCoupon;
-        uint expiredBond;
+        uint expiredPact;
         address tokenCollateral;
         uint collateral;
         uint balancLoanRepay;
@@ -31,33 +31,33 @@ interface IBondContract {
         uint[] ids,
         uint256[] values
     );
-    event BondCreated(uint indexed id, address indexed issuer, uint amount);
+    event PactCreated(uint indexed id, address indexed debtor, uint amount);
     event CollateralDeposited(
-        address indexed issuer,
+        address indexed debtor,
         uint indexed id,
         uint amount
     );
     event CollateralWithdrawn(
-        address indexed issuer,
+        address indexed debtor,
         uint indexed id,
         uint amount
     );
     event InterestDeposited(
-        address indexed issuer,
+        address indexed debtor,
         uint indexed id,
         uint amount
     );
-    event CouponClaimed(address indexed user, uint indexed id, uint amount);
+    event RewardClaimed(address indexed user, uint indexed id, uint amount);
     event LoanClaimed(address indexed user, uint indexed id, uint amount);
-    event ScoreUpdated(address indexed issuer, uint newScore);
+    event ScoreUpdated(address indexed debtor, uint newScore);
     event PaidFeeAtContract(address indexed token, uint indexed amount);
     event WitrawBalanceContracr(address indexed token, uint indexed amount);
-    event LiquidationCoupon(
+    event LiquidationReward(
         address indexed user,
         uint indexed id,
         uint indexed amount
     );
-    event LiquidationBond(uint indexed id, uint amount);
+    event LiquidationPact(uint indexed id, uint amount);
 
     // FUNCTIONS
 
@@ -77,27 +77,27 @@ interface IBondContract {
         bytes memory data
     ) external;
 
-    function viewBondID() external view returns (uint);
+    function viewPactID() external view returns (uint);
 
 
     function totalSupply(uint256 id) external view returns (uint256);
 
-    function createNewBond(
-        address _issuer,
+    function createNewPact(
+        address _debtor,
         address _tokenLoan,
         uint _sizeLoan,
         uint _interest,
-        uint[] memory _couponMaturity,
-        uint _expiredBond,
+        uint[] memory _rewardMaturity,
+        uint _expiredPact,
         address _tokenCollateral,
         uint _collateral,
         uint _amount,
         string calldata _describes
     ) external;
 
-    function showDeatailBondForId(uint _id) external view returns (Bond memory);
+    function showDeatailPactForId(uint _id) external view returns (Pact memory);
 
-    function claimCouponForUSer(uint _id, uint _indexCoupon) external;
+    function claimRewardForUSer(uint _id, uint _indexReward) external;
 
     function claimLoan(uint _id, uint _amount) external;
 

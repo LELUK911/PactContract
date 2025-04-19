@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: Leluk911
 pragma solidity ^0.8.22;
 
-interface IHelperBond {
-    function newBondChecker(
-        uint8 MAX_COUPONS,
-        uint64[] memory _couponMaturity,
-        uint64 _expiredBond,
+interface IHelperPact {
+    function newPactChecker(
+        uint8 MAX_REWARDS,
+        uint64[] memory _rewardMaturity,
+        uint64 _expiredPact,
         address _tokenLoan,
         address _tokenCollateral,
         uint _sizeLoan,

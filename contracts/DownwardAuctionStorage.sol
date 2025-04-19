@@ -5,8 +5,8 @@ pragma solidity ^0.8.24;
 
 // Contract for managing the storage layer of the downward auction system.
 contract DownwardAuctionStorage {
-    // Address of the ERC1155 bond contract.
-    address internal bondContract;
+    // Address of the ERC1155 pact contract.
+    address internal pactContract;
     // Address of the ERC20 token accepted for payments (to be decided between WETH, USDC, etc.).
     address internal money; 
     // Minimum duration for an auction (7 days in seconds).
@@ -21,7 +21,7 @@ contract DownwardAuctionStorage {
     // Structure to represent an auction.
     struct Auction {
         address owner;             // Owner of the auction.
-        uint id;                   // ID of the bond being sold.
+        uint id;                   // ID of the pact being sold.
         uint amount;               // Quantity of bonds put up for auction.
         uint startPrice;           // Starting price of the auction.
         uint expired;              // Expiration timestamp of the auction.

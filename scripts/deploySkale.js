@@ -9,21 +9,21 @@ const main = async () => {
     const owner = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
 
-    // 1. Deploy BondContract
-    const BondContractFactory = await ethers.getContractFactory("BondContract");
-    const bondContract = await BondContractFactory.connect(owner).deploy(owner.address);
-    await bondContract.waitForDeployment();
-    const bondContractAddress = await bondContract.getAddress();
-    console.log("BondContract deployed:", bondContractAddress);
+    // 1. Deploy PactContract
+    const BondContractFactory = await ethers.getContractFactory("PactContract");
+    const pactContract = await BondContractFactory.connect(owner).deploy(owner.address);
+    await pactContract.waitForDeployment();
+    const bondContractAddress = await pactContract.getAddress();
+    console.log("PactContract deployed:", bondContractAddress);
 
     await delay(15000); // Attendi 15 secondi
 
-    // 2. Deploy BondLaunch
-    const LaunchBondContract = await ethers.getContractFactory('BondLaunch');
+    // 2. Deploy PactLaunch
+    const LaunchBondContract = await ethers.getContractFactory('PactLaunch');
     const launchBondContract = await LaunchBondContract.connect(owner).deploy(bondContractAddress);
     await launchBondContract.waitForDeployment();
     const launchBondContractAddress = await launchBondContract.getAddress();
-    console.log("BondLaunch deployed:", launchBondContractAddress);
+    console.log("PactLaunch deployed:", launchBondContractAddress);
 
     await delay(15000);
 
@@ -99,20 +99,20 @@ const main = async () => {
     await delay(15000);
 
 
-    // 8. Configurazione finale BondContract
-    await bondContract.connect(owner).setMAX_COUPONS('6');
+    // 8. Configurazione finale PactContract
+    await pactContract.connect(owner).setMAX_COUPONS('6');
     await delay(5000);
-    await bondContract.connect(owner).setTransfertFee(ethers.parseUnits('0.01'));
+    await pactContract.connect(owner).setTransfertFee(ethers.parseUnits('0.01'));
     await delay(5000);
-    await bondContract.connect(owner).setlauncherContract(launchBondContractAddress);
+    await pactContract.connect(owner).setlauncherContract(launchBondContractAddress);
     await delay(5000);
-    await bondContract.connect(owner).setWETHaddress(WETHaddress);
+    await pactContract.connect(owner).setWETHaddress(WETHaddress);
     await delay(5000);
-    await bondContract.connect(owner).setTreasuryAddress(owner.address);
+    await pactContract.connect(owner).setTreasuryAddress(owner.address);
     await delay(5000);
-    await bondContract.connect(owner).setEcosistemAddress(upwardAuctionContractAddress, true);
+    await pactContract.connect(owner).setEcosistemAddress(upwardAuctionContractAddress, true);
     await delay(5000);
-    await bondContract.connect(owner).setEcosistemAddress(downwardAuctionContractAddress, true);
+    await pactContract.connect(owner).setEcosistemAddress(downwardAuctionContractAddress, true);
     await delay(5000);
 
     await upwardAuctionContract.connect(owner).setCoolDown(3);
@@ -127,19 +127,19 @@ const main = async () => {
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${bondContractAddress}`)
+    console.log(`Pact contract -> ${bondContractAddress}`)
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${launchBondContractAddress}`)
+    console.log(`Pact contract -> ${launchBondContractAddress}`)
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${upwardAuctionContractAddress}`)
+    console.log(`Pact contract -> ${upwardAuctionContractAddress}`)
     console.log(``)
     console.log(``)
 
-    console.log(`Bond contract -> ${downwardAuctionContractAddress}`)
+    console.log(`Pact contract -> ${downwardAuctionContractAddress}`)
     console.log(``)
     console.log(``)
 

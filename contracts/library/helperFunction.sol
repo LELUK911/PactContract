@@ -24,10 +24,10 @@ contract HelperBond {
 
 
 
-    function newBondChecker(
-        uint8 MAX_COUPONS,
-        uint64[] memory _couponMaturity,
-        uint64 _expiredBond,
+    function newPactChecker(
+        uint8 MAX_REWARDS,
+        uint64[] memory _rewardMaturity,
+        uint64 _expiredPact,
         address _tokenLoan,
         address _tokenCollateral,
         uint _sizeLoan,
@@ -38,28 +38,28 @@ contract HelperBond {
 
         require(_thisIsERC20(_tokenLoan), "Set correct address for Token Loan");
         require(_sizeLoan > 0, "set correct size Loan for variables");
-        require(_interest > 0, "set correct Interest for variables");
+        require(_interest > 0, "set correct Reward for variables");
         require(_collateral > 0, "set correct Collateral for variables");
         require(_amount > 0, "set correct amount for variables");
-        require(_couponMaturity.length <= MAX_COUPONS, "Too many coupons");
+        require(_rewardMaturity.length <= MAX_REWARDS, "Too many rewards");
         require(
             _tokenCollateral != _tokenLoan,
             "Set different Token Loan and Collateral"
         );
 
-        // Validate coupon schedule and final expiry
+        // Validate scheduled reward schedule and final expiry
         require(
             TimeManagment.checkDatalistAndExpired(
-                _couponMaturity,
-                _expiredBond
+                _rewardMaturity,
+                _expiredPact
             ),
-            "Set correct data, coupon maturity must be ascending; last < expiredBond"
+            "Set correct data, scheduled reward maturity must be ascending; last < expiredPact"
         );
         require(
-            _expiredBond > _couponMaturity[_couponMaturity.length - 1],
-            "Set correct expiry for this bond"
+            _expiredPact > _rewardMaturity[_rewardMaturity.length - 1],
+            "Set correct expiry for this pact"
         );
-        require(_amount <= 1000000, "Amount exceeds max bond supply");
+        require(_amount <= 1000000, "Amount exceeds max pact supply");
         
 
         }

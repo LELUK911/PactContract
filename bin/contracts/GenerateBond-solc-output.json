@@ -7,7 +7,7 @@
                         "inputs": [
                             {
                                 "internalType": "address",
-                                "name": "_bondContrac",
+                                "name": "_pactContrac",
                                 "type": "address"
                             },
                             {
@@ -205,7 +205,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "WithDrawBond",
+                        "name": "WithDrawPact",
                         "type": "event"
                     },
                     {
@@ -306,7 +306,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "newAcutionBond",
+                        "name": "newAcutionPact",
                         "outputs": [],
                         "stateMutability": "nonpayable",
                         "type": "function"
@@ -481,7 +481,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "withDrawBond",
+                        "name": "withDrawPact",
                         "outputs": [],
                         "stateMutability": "nonpayable",
                         "type": "function"
@@ -698,42 +698,42 @@
                         "external": {
                             "closeAuction(uint256)": "infinite",
                             "instalmentPot(uint256,uint256)": "infinite",
-                            "newAcutionBond(uint256,uint256,uint256,uint256)": "infinite",
+                            "newAcutionPact(uint256,uint256,uint256,uint256)": "infinite",
                             "owner()": "2390",
                             "paused()": "2333",
                             "renounceOwnership()": "28148",
                             "showAuction(uint256)": "infinite",
                             "showAuctionsList()": "infinite",
                             "transferOwnership(address)": "28349",
-                            "withDrawBond(uint256)": "infinite",
+                            "withDrawPact(uint256)": "infinite",
                             "withdrawMoney(uint256)": "infinite"
                         },
                         "internal": {
                             "_closeAuction(address,uint256)": "infinite",
-                            "_depositBond(address,address,uint256,uint256)": "infinite",
+                            "_depositPact(address,address,uint256,uint256)": "infinite",
                             "_depositErc20(address,address,uint256)": "infinite",
                             "_instalmentPot(address,uint256,uint256)": "infinite",
-                            "_newAcutionBond(address,uint256,uint256,uint256,uint256)": "infinite",
+                            "_newAcutionPact(address,uint256,uint256,uint256,uint256)": "infinite",
                             "_setAuctionData(address,uint256,uint256,uint256,uint256)": "infinite",
-                            "_withDrawBond(address,uint256)": "infinite",
+                            "_withDrawPact(address,uint256)": "infinite",
                             "_withdrawMoney(address,uint256)": "infinite"
                         }
                     },
                     "methodIdentifiers": {
                         "closeAuction(uint256)": "236ed8f3",
                         "instalmentPot(uint256,uint256)": "cde7451c",
-                        "newAcutionBond(uint256,uint256,uint256,uint256)": "918af8fa",
+                        "newAcutionPact(uint256,uint256,uint256,uint256)": "918af8fa",
                         "owner()": "8da5cb5b",
                         "paused()": "5c975abb",
                         "renounceOwnership()": "715018a6",
                         "showAuction(uint256)": "1e4ef18c",
                         "showAuctionsList()": "f0aa872b",
                         "transferOwnership(address)": "f2fde38b",
-                        "withDrawBond(uint256)": "cac5d1ba",
+                        "withDrawPact(uint256)": "cac5d1ba",
                         "withdrawMoney(uint256)": "54876921"
                     }
                 },
-                "metadata": "{\"compiler\":{\"version\":\"0.8.28+commit.7893614a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_bondContrac\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_money\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"AddressInsufficientBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"EnforcedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ExpectedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedInnerCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_time\",\"type\":\"uint256\"}],\"name\":\"CloseAuction\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"NewAuction\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WithDrawBond\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WithDrawMoney\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_player\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amountPot\",\"type\":\"uint256\"}],\"name\":\"newInstalmentPot\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"closeAuction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"instalmentPot\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_startPrice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_expired\",\"type\":\"uint256\"}],\"name\":\"newAcutionBond\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"showAuction\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"startPrice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expired\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pot\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"player\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"open\",\"type\":\"bool\"}],\"internalType\":\"struct BondMarket.Auction\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"showAuctionsList\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"startPrice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expired\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pot\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"player\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"open\",\"type\":\"bool\"}],\"internalType\":\"struct BondMarket.Auction[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"withDrawBond\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"withdrawMoney\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"errors\":{\"AddressEmptyCode(address)\":[{\"details\":\"There's no code at `target` (it is not a contract).\"}],\"AddressInsufficientBalance(address)\":[{\"details\":\"The ETH balance of the account is not enough to perform the operation.\"}],\"EnforcedPause()\":[{\"details\":\"The operation failed because the contract is paused.\"}],\"ExpectedPause()\":[{\"details\":\"The operation failed because the contract is not paused.\"}],\"FailedInnerCall()\":[{\"details\":\"A call to an address target failed. The target may have reverted.\"}],\"OwnableInvalidOwner(address)\":[{\"details\":\"The owner is not a valid owner account. (eg. `address(0)`)\"}],\"OwnableUnauthorizedAccount(address)\":[{\"details\":\"The caller account is not authorized to perform an operation.\"}],\"ReentrancyGuardReentrantCall()\":[{\"details\":\"Unauthorized reentrant call.\"}],\"SafeERC20FailedOperation(address)\":[{\"details\":\"An operation with an ERC20 token failed.\"}]},\"events\":{\"Paused(address)\":{\"details\":\"Emitted when the pause is triggered by `account`.\"},\"Unpaused(address)\":{\"details\":\"Emitted when the pause is lifted by `account`.\"}},\"kind\":\"dev\",\"methods\":{\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"paused()\":{\"details\":\"Returns true if the contract is paused, and false otherwise.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/GenerateBond.sol\":\"BondMarket\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[],\"viaIR\":true},\"sources\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/GenerateBond.sol\":{\"keccak256\":\"0xe17575ecfc3bd10b0583baed3c122ea67d37692b423f52ba9260bf83dcac3a66\",\"license\":\"Leluk911\",\"urls\":[\"bzz-raw://452131c8e204430d0ad8d1e3b47d331e298ab542b117d2fddb145cc2fd73c4a7\",\"dweb:/ipfs/QmednZjdVRy1upUjdfDtX1CGheGXZnvneMS3oTDgWf2mkN\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/interface/Ibond.sol\":{\"keccak256\":\"0xa3f0df0695296440031ba4baebe6da0b4d46fb459559fb010463f5bbdde88909\",\"license\":\"Leluk911\",\"urls\":[\"bzz-raw://0dbd8dbbe3e7c702d52b33b2b4c2043c2f4862d5b59cd2de7809dbf36eb3b48a\",\"dweb:/ipfs/QmWPWdVKG5DamWSQG3w3B84SN3m89WfR4N2kwFupbR1cgZ\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/access/Ownable.sol\":{\"keccak256\":\"0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6\",\"dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/interfaces/IERC1155.sol\":{\"keccak256\":\"0x1528f3ef49ef2750b428564df007feb2d5c7a792bf79c6d125409c96322a4c00\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://663f59a9b1e3b1d831edeeb83590e8d9582d560c603e91327372502c64534bd6\",\"dweb:/ipfs/QmeGBrXcnomfBriPJEWXwSs1t2j9C4H7AhjuZVWHknSd6A\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC1155/IERC1155.sol\":{\"keccak256\":\"0x6caffc9cfdc623eca9f87a686071708af5d5c17454d65022843fdddbc53c0cce\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://ecf8c7ed1f8ff443c181f64496ae380ee02e61dcd2ed120e1e997837a926f182\",\"dweb:/ipfs/QmWASYTrZPF2MrcpC3EBmxx6RgtZ5Fr4jwrsmB7ZF7qhDC\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xc6a8ff0ea489379b61faa647490411b80102578440ab9d84e9a957cc12164e70\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://0ea104e577e63faea3b69c415637e99e755dcbf64c5833d7140c35a714d6d90c\",\"dweb:/ipfs/Qmau6x4Ns9XdyynRCNNp3RhLqijJjFm7z5fyZazfYFGYdq\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol\":{\"keccak256\":\"0x6008dabfe393240d73d7dd7688033f72740d570aa422254d29a7dce8568f3aff\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://f5196ec75139918c6c7bb4251b36395e668f1fa6d206beba7e7520e74913940d\",\"dweb:/ipfs/QmSyqjksXxmm2mCG6qRd1yuwLykypkSVBbnBnGqJRcuJMi\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol\":{\"keccak256\":\"0x37bb49513c49c87c4642a891b13b63571bc87013dde806617aa1efb54605f386\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b3036b3a83b7c48f96641f2a9002b9f2dcb6a5958dd670894ada21ae8229b3d0\",\"dweb:/ipfs/QmUNfSBdoVtjhETaUJCYcaC7pTMgbhht926tJ2uXJbiVd3\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/Address.sol\":{\"keccak256\":\"0xaf28a975a78550e45f65e559a3ad6a5ad43b9b8a37366999abd1b7084eb70721\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b7bd24e224f67f65bfadf85dc2929fa965456bb2415478bd0125471b5ce35245\",\"dweb:/ipfs/QmRaydGr8BTHs1kvaZfsNU69pKzUAGFrvABn1KiRSbE51y\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/Context.sol\":{\"keccak256\":\"0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12\",\"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/Pausable.sol\":{\"keccak256\":\"0xb2e5f50762c27fb4b123e3619c3c02bdcba5e515309382e5bfb6f7d6486510bd\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1a4b83328c98d518a2699c2cbe9e9b055e78aa57fa8639f1b88deb8b3750b5dc\",\"dweb:/ipfs/QmXdcYj5v7zQxXFPULShHkR5p4Wa2zYuupbHnFdV3cHYtc\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol\":{\"keccak256\":\"0xf980daa263b661ab8ddee7d4fd833c7da7e7995e2c359ff1f17e67e4112f2236\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://7448ab095d6940130bcf76ba47a2eab14148c83119523b93dd89f6d84edd6c02\",\"dweb:/ipfs/QmawrZ4voKQjH3oomXT3Kuheb3Mnmo2VvVpxg8Ne5UJUrd\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol\":{\"keccak256\":\"0x4296879f55019b23e135000eb36896057e7101fb7fb859c5ef690cf14643757b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://87b3541437c8c443ccd36795e56a338ed12855eec17f8da624511b8d1a7e14df\",\"dweb:/ipfs/QmeJQCtZrQjtJLr6u7ZHWeH3pBnjtLWzvRrKViAi7UZqxL\"]}},\"version\":1}",
+                "metadata": "{\"compiler\":{\"version\":\"0.8.28+commit.7893614a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_pactContrac\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_money\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"target\",\"type\":\"address\"}],\"name\":\"AddressEmptyCode\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"AddressInsufficientBalance\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"EnforcedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ExpectedPause\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"FailedInnerCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"}],\"name\":\"OwnableInvalidOwner\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"OwnableUnauthorizedAccount\",\"type\":\"error\"},{\"inputs\":[],\"name\":\"ReentrancyGuardReentrantCall\",\"type\":\"error\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"}],\"name\":\"SafeERC20FailedOperation\",\"type\":\"error\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_time\",\"type\":\"uint256\"}],\"name\":\"CloseAuction\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_owner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"NewAuction\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Paused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"account\",\"type\":\"address\"}],\"name\":\"Unpaused\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WithDrawPact\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WithDrawMoney\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"_player\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"_amountPot\",\"type\":\"uint256\"}],\"name\":\"newInstalmentPot\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"closeAuction\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"instalmentPot\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_startPrice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_expired\",\"type\":\"uint256\"}],\"name\":\"newAcutionPact\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"paused\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"showAuction\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"startPrice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expired\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pot\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"player\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"open\",\"type\":\"bool\"}],\"internalType\":\"struct BondMarket.Auction\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"showAuctionsList\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"startPrice\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expired\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"pot\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"player\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"open\",\"type\":\"bool\"}],\"internalType\":\"struct BondMarket.Auction[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_index\",\"type\":\"uint256\"}],\"name\":\"withDrawPact\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"withdrawMoney\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"errors\":{\"AddressEmptyCode(address)\":[{\"details\":\"There's no code at `target` (it is not a contract).\"}],\"AddressInsufficientBalance(address)\":[{\"details\":\"The ETH balance of the account is not enough to perform the operation.\"}],\"EnforcedPause()\":[{\"details\":\"The operation failed because the contract is paused.\"}],\"ExpectedPause()\":[{\"details\":\"The operation failed because the contract is not paused.\"}],\"FailedInnerCall()\":[{\"details\":\"A call to an address target failed. The target may have reverted.\"}],\"OwnableInvalidOwner(address)\":[{\"details\":\"The owner is not a valid owner account. (eg. `address(0)`)\"}],\"OwnableUnauthorizedAccount(address)\":[{\"details\":\"The caller account is not authorized to perform an operation.\"}],\"ReentrancyGuardReentrantCall()\":[{\"details\":\"Unauthorized reentrant call.\"}],\"SafeERC20FailedOperation(address)\":[{\"details\":\"An operation with an ERC20 token failed.\"}]},\"events\":{\"Paused(address)\":{\"details\":\"Emitted when the pause is triggered by `account`.\"},\"Unpaused(address)\":{\"details\":\"Emitted when the pause is lifted by `account`.\"}},\"kind\":\"dev\",\"methods\":{\"owner()\":{\"details\":\"Returns the address of the current owner.\"},\"paused()\":{\"details\":\"Returns true if the contract is paused, and false otherwise.\"},\"renounceOwnership()\":{\"details\":\"Leaves the contract without owner. It will not be possible to call `onlyOwner` functions. Can only be called by the current owner. NOTE: Renouncing ownership will leave the contract without an owner, thereby disabling any functionality that is only available to the owner.\"},\"transferOwnership(address)\":{\"details\":\"Transfers ownership of the contract to a new account (`newOwner`). Can only be called by the current owner.\"}},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/GenerateBond.sol\":\"BondMarket\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[],\"viaIR\":true},\"sources\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/GenerateBond.sol\":{\"keccak256\":\"0xe17575ecfc3bd10b0583baed3c122ea67d37692b423f52ba9260bf83dcac3a66\",\"license\":\"Leluk911\",\"urls\":[\"bzz-raw://452131c8e204430d0ad8d1e3b47d331e298ab542b117d2fddb145cc2fd73c4a7\",\"dweb:/ipfs/QmednZjdVRy1upUjdfDtX1CGheGXZnvneMS3oTDgWf2mkN\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/interface/Ibond.sol\":{\"keccak256\":\"0xa3f0df0695296440031ba4baebe6da0b4d46fb459559fb010463f5bbdde88909\",\"license\":\"Leluk911\",\"urls\":[\"bzz-raw://0dbd8dbbe3e7c702d52b33b2b4c2043c2f4862d5b59cd2de7809dbf36eb3b48a\",\"dweb:/ipfs/QmWPWdVKG5DamWSQG3w3B84SN3m89WfR4N2kwFupbR1cgZ\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/access/Ownable.sol\":{\"keccak256\":\"0xff6d0bb2e285473e5311d9d3caacb525ae3538a80758c10649a4d61029b017bb\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://8ed324d3920bb545059d66ab97d43e43ee85fd3bd52e03e401f020afb0b120f6\",\"dweb:/ipfs/QmfEckWLmZkDDcoWrkEvMWhms66xwTLff9DDhegYpvHo1a\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/interfaces/IERC1155.sol\":{\"keccak256\":\"0x1528f3ef49ef2750b428564df007feb2d5c7a792bf79c6d125409c96322a4c00\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://663f59a9b1e3b1d831edeeb83590e8d9582d560c603e91327372502c64534bd6\",\"dweb:/ipfs/QmeGBrXcnomfBriPJEWXwSs1t2j9C4H7AhjuZVWHknSd6A\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC1155/IERC1155.sol\":{\"keccak256\":\"0x6caffc9cfdc623eca9f87a686071708af5d5c17454d65022843fdddbc53c0cce\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://ecf8c7ed1f8ff443c181f64496ae380ee02e61dcd2ed120e1e997837a926f182\",\"dweb:/ipfs/QmWASYTrZPF2MrcpC3EBmxx6RgtZ5Fr4jwrsmB7ZF7qhDC\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC20/IERC20.sol\":{\"keccak256\":\"0xc6a8ff0ea489379b61faa647490411b80102578440ab9d84e9a957cc12164e70\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://0ea104e577e63faea3b69c415637e99e755dcbf64c5833d7140c35a714d6d90c\",\"dweb:/ipfs/Qmau6x4Ns9XdyynRCNNp3RhLqijJjFm7z5fyZazfYFGYdq\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC20/extensions/IERC20Permit.sol\":{\"keccak256\":\"0x6008dabfe393240d73d7dd7688033f72740d570aa422254d29a7dce8568f3aff\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://f5196ec75139918c6c7bb4251b36395e668f1fa6d206beba7e7520e74913940d\",\"dweb:/ipfs/QmSyqjksXxmm2mCG6qRd1yuwLykypkSVBbnBnGqJRcuJMi\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol\":{\"keccak256\":\"0x37bb49513c49c87c4642a891b13b63571bc87013dde806617aa1efb54605f386\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b3036b3a83b7c48f96641f2a9002b9f2dcb6a5958dd670894ada21ae8229b3d0\",\"dweb:/ipfs/QmUNfSBdoVtjhETaUJCYcaC7pTMgbhht926tJ2uXJbiVd3\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/Address.sol\":{\"keccak256\":\"0xaf28a975a78550e45f65e559a3ad6a5ad43b9b8a37366999abd1b7084eb70721\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://b7bd24e224f67f65bfadf85dc2929fa965456bb2415478bd0125471b5ce35245\",\"dweb:/ipfs/QmRaydGr8BTHs1kvaZfsNU69pKzUAGFrvABn1KiRSbE51y\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/Context.sol\":{\"keccak256\":\"0x493033a8d1b176a037b2cc6a04dad01a5c157722049bbecf632ca876224dd4b2\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://6a708e8a5bdb1011c2c381c9a5cfd8a9a956d7d0a9dc1bd8bcdaf52f76ef2f12\",\"dweb:/ipfs/Qmax9WHBnVsZP46ZxEMNRQpLQnrdE4dK8LehML1Py8FowF\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/Pausable.sol\":{\"keccak256\":\"0xb2e5f50762c27fb4b123e3619c3c02bdcba5e515309382e5bfb6f7d6486510bd\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://1a4b83328c98d518a2699c2cbe9e9b055e78aa57fa8639f1b88deb8b3750b5dc\",\"dweb:/ipfs/QmXdcYj5v7zQxXFPULShHkR5p4Wa2zYuupbHnFdV3cHYtc\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/ReentrancyGuard.sol\":{\"keccak256\":\"0xf980daa263b661ab8ddee7d4fd833c7da7e7995e2c359ff1f17e67e4112f2236\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://7448ab095d6940130bcf76ba47a2eab14148c83119523b93dd89f6d84edd6c02\",\"dweb:/ipfs/QmawrZ4voKQjH3oomXT3Kuheb3Mnmo2VvVpxg8Ne5UJUrd\"]},\"/home/leluk/Desktop/Study/solidity/project/contractBond/node_modules/@openzeppelin/contracts/utils/introspection/IERC165.sol\":{\"keccak256\":\"0x4296879f55019b23e135000eb36896057e7101fb7fb859c5ef690cf14643757b\",\"license\":\"MIT\",\"urls\":[\"bzz-raw://87b3541437c8c443ccd36795e56a338ed12855eec17f8da624511b8d1a7e14df\",\"dweb:/ipfs/QmeJQCtZrQjtJLr6u7ZHWeH3pBnjtLWzvRrKViAi7UZqxL\"]}},\"version\":1}",
                 "storageLayout": {
                     "storage": [
                         {
@@ -763,7 +763,7 @@
                         {
                             "astId": 24,
                             "contract": "/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/GenerateBond.sol:BondMarket",
-                            "label": "bondContract",
+                            "label": "pactContract",
                             "offset": 0,
                             "slot": "3",
                             "type": "t_address"
@@ -935,7 +935,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "BondCreated",
+                        "name": "PactCreated",
                         "type": "event"
                     },
                     {
@@ -1010,7 +1010,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "CouponClaimed",
+                        "name": "RewardClaimed",
                         "type": "event"
                     },
                     {
@@ -1054,7 +1054,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "LiquidationBond",
+                        "name": "LiquidationPact",
                         "type": "event"
                     },
                     {
@@ -1079,7 +1079,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "LiquidationCoupon",
+                        "name": "LiquidationReward",
                         "type": "event"
                     },
                     {
@@ -1235,11 +1235,11 @@
                             },
                             {
                                 "internalType": "uint256",
-                                "name": "_indexCoupon",
+                                "name": "_indexReward",
                                 "type": "uint256"
                             }
                         ],
-                        "name": "claimCouponForUSer",
+                        "name": "claimRewardForUSer",
                         "outputs": [],
                         "stateMutability": "nonpayable",
                         "type": "function"
@@ -1279,7 +1279,7 @@
                         "inputs": [
                             {
                                 "internalType": "address",
-                                "name": "_issuer",
+                                "name": "_debtor",
                                 "type": "address"
                             },
                             {
@@ -1299,12 +1299,12 @@
                             },
                             {
                                 "internalType": "uint256[]",
-                                "name": "_couponMaturity",
+                                "name": "_rewardMaturity",
                                 "type": "uint256[]"
                             },
                             {
                                 "internalType": "uint256",
-                                "name": "_expiredBond",
+                                "name": "_expiredPact",
                                 "type": "uint256"
                             },
                             {
@@ -1328,7 +1328,7 @@
                                 "type": "string"
                             }
                         ],
-                        "name": "createNewBond",
+                        "name": "createNewPact",
                         "outputs": [],
                         "stateMutability": "nonpayable",
                         "type": "function"
@@ -1439,7 +1439,7 @@
                                 "type": "uint256"
                             }
                         ],
-                        "name": "showDeatailBondForId",
+                        "name": "showDeatailPactForId",
                         "outputs": [
                             {
                                 "components": [
@@ -1470,12 +1470,12 @@
                                     },
                                     {
                                         "internalType": "uint256[]",
-                                        "name": "couponMaturity",
+                                        "name": "rewardMaturity",
                                         "type": "uint256[]"
                                     },
                                     {
                                         "internalType": "uint256",
-                                        "name": "expiredBond",
+                                        "name": "expiredPact",
                                         "type": "uint256"
                                     },
                                     {
@@ -1533,7 +1533,7 @@
                     },
                     {
                         "inputs": [],
-                        "name": "viewBondID",
+                        "name": "viewPactID",
                         "outputs": [
                             {
                                 "internalType": "uint256",
@@ -1596,23 +1596,23 @@
                     },
                     "gasEstimates": null,
                     "methodIdentifiers": {
-                        "claimCouponForUSer(uint256,uint256)": "f360afaf",
+                        "claimRewardForUSer(uint256,uint256)": "f360afaf",
                         "claimLoan(uint256,uint256)": "0d9fa5b7",
                         "claimScorePoint(uint256)": "09750d87",
-                        "createNewBond(address,address,uint256,uint256,uint256[],uint256,address,uint256,uint256,string)": "26172c1b",
+                        "createNewPact(address,address,uint256,uint256,uint256[],uint256,address,uint256,uint256,string)": "26172c1b",
                         "depositTokenForInterest(uint256,uint256)": "31b2cd48",
                         "safeBatchTransferFrom(address,address,uint256[],uint256[],bytes)": "2eb2c2d6",
                         "safeTransferFrom(address,address,uint256,uint256,bytes)": "f242432a",
                         "setInPause()": "b3c56066",
                         "setUnPause()": "c537a1b1",
-                        "showDeatailBondForId(uint256)": "6c9e876f",
+                        "showDeatailPactForId(uint256)": "6c9e876f",
                         "totalSupply(uint256)": "bd85b039",
-                        "viewBondID()": "aa9849ce",
+                        "viewPactID()": "aa9849ce",
                         "withdrawCollateral(uint256)": "6112fe2e",
                         "withdrawContractBalance(address)": "57fbb9df"
                     }
                 },
-                "metadata": "{\"compiler\":{\"version\":\"0.8.28+commit.7893614a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"BondCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"CollateralDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"CollateralWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"CouponClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"InterestDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LiquidationBond\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LiquidationCoupon\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LoanClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"PaidFeeAtContract\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"ids\",\"type\":\"uint256[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\"}],\"name\":\"SafeBatchTransferFrom\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"SafeTransferFrom\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newScore\",\"type\":\"uint256\"}],\"name\":\"ScoreUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WitrawBalanceContracr\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_indexCoupon\",\"type\":\"uint256\"}],\"name\":\"claimCouponForUSer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"claimLoan\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"claimScorePoint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_issuer\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenLoan\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_sizeLoan\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_interest\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"_couponMaturity\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"_expiredBond\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_tokenCollateral\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_collateral\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_describes\",\"type\":\"string\"}],\"name\":\"createNewBond\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"depositTokenForInterest\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256[]\",\"name\":\"ids\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeBatchTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setInPause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setUnPause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"showDeatailBondForId\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenLoan\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"sizeLoan\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"interest\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"couponMaturity\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"expiredBond\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"tokenCollateral\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"collateral\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"balancLoanRepay\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"describes\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"struct IBondContract.Bond\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"viewBondID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"withdrawCollateral\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenAddress\",\"type\":\"address\"}],\"name\":\"withdrawContractBalance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/interface/Ibond.sol\":\"IBondContract\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[],\"viaIR\":true},\"sources\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/interface/Ibond.sol\":{\"keccak256\":\"0xa3f0df0695296440031ba4baebe6da0b4d46fb459559fb010463f5bbdde88909\",\"license\":\"Leluk911\",\"urls\":[\"bzz-raw://0dbd8dbbe3e7c702d52b33b2b4c2043c2f4862d5b59cd2de7809dbf36eb3b48a\",\"dweb:/ipfs/QmWPWdVKG5DamWSQG3w3B84SN3m89WfR4N2kwFupbR1cgZ\"]}},\"version\":1}",
+                "metadata": "{\"compiler\":{\"version\":\"0.8.28+commit.7893614a\"},\"language\":\"Solidity\",\"output\":{\"abi\":[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"PactCreated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"CollateralDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"CollateralWithdrawn\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"RewardClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"InterestDeposited\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LiquidationPact\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LiquidationReward\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"user\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LoanClaimed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"PaidFeeAtContract\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"ids\",\"type\":\"uint256[]\"},{\"indexed\":false,\"internalType\":\"uint256[]\",\"name\":\"values\",\"type\":\"uint256[]\"}],\"name\":\"SafeBatchTransferFrom\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"value\",\"type\":\"uint256\"}],\"name\":\"SafeTransferFrom\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"newScore\",\"type\":\"uint256\"}],\"name\":\"ScoreUpdated\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"token\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"WitrawBalanceContracr\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_indexReward\",\"type\":\"uint256\"}],\"name\":\"claimRewardForUSer\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"claimLoan\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"claimScorePoint\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_debtor\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"_tokenLoan\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_sizeLoan\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_interest\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"_rewardMaturity\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"_expiredPact\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"_tokenCollateral\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"_collateral\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"_describes\",\"type\":\"string\"}],\"name\":\"createNewPact\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"_amount\",\"type\":\"uint256\"}],\"name\":\"depositTokenForInterest\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256[]\",\"name\":\"ids\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256[]\",\"name\":\"amounts\",\"type\":\"uint256[]\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeBatchTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"from\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"to\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"data\",\"type\":\"bytes\"}],\"name\":\"safeTransferFrom\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setInPause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setUnPause\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"showDeatailPactForId\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"issuer\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"tokenLoan\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"sizeLoan\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"interest\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"rewardMaturity\",\"type\":\"uint256[]\"},{\"internalType\":\"uint256\",\"name\":\"expiredPact\",\"type\":\"uint256\"},{\"internalType\":\"address\",\"name\":\"tokenCollateral\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"collateral\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"balancLoanRepay\",\"type\":\"uint256\"},{\"internalType\":\"string\",\"name\":\"describes\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"internalType\":\"struct IBondContract.Bond\",\"name\":\"\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"id\",\"type\":\"uint256\"}],\"name\":\"totalSupply\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"viewPactID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"_id\",\"type\":\"uint256\"}],\"name\":\"withdrawCollateral\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"_tokenAddress\",\"type\":\"address\"}],\"name\":\"withdrawContractBalance\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}],\"devdoc\":{\"kind\":\"dev\",\"methods\":{},\"version\":1},\"userdoc\":{\"kind\":\"user\",\"methods\":{},\"version\":1}},\"settings\":{\"compilationTarget\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/interface/Ibond.sol\":\"IBondContract\"},\"evmVersion\":\"cancun\",\"libraries\":{},\"metadata\":{\"bytecodeHash\":\"ipfs\"},\"optimizer\":{\"enabled\":true,\"runs\":200},\"remappings\":[],\"viaIR\":true},\"sources\":{\"/home/leluk/Desktop/Study/solidity/project/contractBond/contracts/interface/Ibond.sol\":{\"keccak256\":\"0xa3f0df0695296440031ba4baebe6da0b4d46fb459559fb010463f5bbdde88909\",\"license\":\"Leluk911\",\"urls\":[\"bzz-raw://0dbd8dbbe3e7c702d52b33b2b4c2043c2f4862d5b59cd2de7809dbf36eb3b48a\",\"dweb:/ipfs/QmWPWdVKG5DamWSQG3w3B84SN3m89WfR4N2kwFupbR1cgZ\"]}},\"version\":1}",
                 "storageLayout": {
                     "storage": [],
                     "types": null
@@ -3384,7 +3384,7 @@
                                 "constant": false,
                                 "id": 24,
                                 "mutability": "mutable",
-                                "name": "bondContract",
+                                "name": "pactContract",
                                 "nameLocation": "1176:12:0",
                                 "nodeType": "VariableDeclaration",
                                 "scope": 720,
@@ -3495,7 +3495,7 @@
                                                 "lValueRequested": false,
                                                 "leftHandSide": {
                                                     "id": 40,
-                                                    "name": "bondContract",
+                                                    "name": "pactContract",
                                                     "nodeType": "Identifier",
                                                     "overloadedDeclarations": [],
                                                     "referencedDeclaration": 24,
@@ -3509,7 +3509,7 @@
                                                 "operator": "=",
                                                 "rightHandSide": {
                                                     "id": 41,
-                                                    "name": "_bondContrac",
+                                                    "name": "_pactContrac",
                                                     "nodeType": "Identifier",
                                                     "overloadedDeclarations": [],
                                                     "referencedDeclaration": 31,
@@ -3635,7 +3635,7 @@
                                             "constant": false,
                                             "id": 31,
                                             "mutability": "mutable",
-                                            "name": "_bondContrac",
+                                            "name": "_pactContrac",
                                             "nameLocation": "1327:12:0",
                                             "nodeType": "VariableDeclaration",
                                             "scope": 49,
@@ -5101,7 +5101,7 @@
                                                         }
                                                     ],
                                                     "id": 161,
-                                                    "name": "_newAcutionBond",
+                                                    "name": "_newAcutionPact",
                                                     "nodeType": "Identifier",
                                                     "overloadedDeclarations": [],
                                                     "referencedDeclaration": 318,
@@ -5155,7 +5155,7 @@
                                         "src": "2326:12:0"
                                     }
                                 ],
-                                "name": "newAcutionBond",
+                                "name": "newAcutionPact",
                                 "nameLocation": "2207:14:0",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -6079,7 +6079,7 @@
                                 "anonymous": false,
                                 "eventSelector": "81656f2447e445b745a9252017175a9e8482e34c38def1fff70a7a4f79acec09",
                                 "id": 243,
-                                "name": "WithDrawBond",
+                                "name": "WithDrawPact",
                                 "nameLocation": "3271:12:0",
                                 "nodeType": "EventDefinition",
                                 "parameters": {
@@ -6237,7 +6237,7 @@
                                                         }
                                                     ],
                                                     "id": 253,
-                                                    "name": "_withDrawBond",
+                                                    "name": "_withDrawPact",
                                                     "nodeType": "Identifier",
                                                     "overloadedDeclarations": [],
                                                     "referencedDeclaration": 670,
@@ -6321,7 +6321,7 @@
                                         "src": "3441:16:0"
                                     }
                                 ],
-                                "name": "withDrawBond",
+                                "name": "withDrawPact",
                                 "nameLocation": "3393:12:0",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -6815,7 +6815,7 @@
                                                         }
                                                     ],
                                                     "id": 299,
-                                                    "name": "_depositBond",
+                                                    "name": "_depositPact",
                                                     "nodeType": "Identifier",
                                                     "overloadedDeclarations": [],
                                                     "referencedDeclaration": 341,
@@ -6969,7 +6969,7 @@
                                 "implemented": true,
                                 "kind": "function",
                                 "modifiers": [],
-                                "name": "_newAcutionBond",
+                                "name": "_newAcutionPact",
                                 "nameLocation": "3791:15:0",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -7228,7 +7228,7 @@
                                                         "arguments": [
                                                             {
                                                                 "id": 330,
-                                                                "name": "bondContract",
+                                                                "name": "pactContract",
                                                                 "nodeType": "Identifier",
                                                                 "overloadedDeclarations": [],
                                                                 "referencedDeclaration": 24,
@@ -7314,7 +7314,7 @@
                                 "implemented": true,
                                 "kind": "function",
                                 "modifiers": [],
-                                "name": "_depositBond",
+                                "name": "_depositPact",
                                 "nameLocation": "4083:12:0",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -11198,7 +11198,7 @@
                                                     "constant": false,
                                                     "id": 628,
                                                     "mutability": "mutable",
-                                                    "name": "amountBond",
+                                                    "name": "amountPact",
                                                     "nameLocation": "6963:10:0",
                                                     "nodeType": "VariableDeclaration",
                                                     "scope": 669,
@@ -11535,7 +11535,7 @@
                                                     },
                                                     {
                                                         "id": 654,
-                                                        "name": "amountBond",
+                                                        "name": "amountPact",
                                                         "nodeType": "Identifier",
                                                         "overloadedDeclarations": [],
                                                         "referencedDeclaration": 628,
@@ -11566,7 +11566,7 @@
                                                         }
                                                     ],
                                                     "id": 641,
-                                                    "name": "_depositBond",
+                                                    "name": "_depositPact",
                                                     "nodeType": "Identifier",
                                                     "overloadedDeclarations": [],
                                                     "referencedDeclaration": 341,
@@ -11707,7 +11707,7 @@
                                                     },
                                                     {
                                                         "id": 666,
-                                                        "name": "amountBond",
+                                                        "name": "amountPact",
                                                         "nodeType": "Identifier",
                                                         "overloadedDeclarations": [],
                                                         "referencedDeclaration": 628,
@@ -11734,7 +11734,7 @@
                                                         }
                                                     ],
                                                     "id": 657,
-                                                    "name": "WithDrawBond",
+                                                    "name": "WithDrawPact",
                                                     "nodeType": "Identifier",
                                                     "overloadedDeclarations": [],
                                                     "referencedDeclaration": 243,
@@ -11770,7 +11770,7 @@
                                 "implemented": true,
                                 "kind": "function",
                                 "modifiers": [],
-                                "name": "_withDrawBond",
+                                "name": "_withDrawPact",
                                 "nameLocation": "6631:13:0",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -12724,7 +12724,7 @@
                                         "constant": false,
                                         "id": 735,
                                         "mutability": "mutable",
-                                        "name": "couponMaturity",
+                                        "name": "rewardMaturity",
                                         "nameLocation": "236:14:1",
                                         "nodeType": "VariableDeclaration",
                                         "scope": 748,
@@ -12760,7 +12760,7 @@
                                         "constant": false,
                                         "id": 737,
                                         "mutability": "mutable",
-                                        "name": "expiredBond",
+                                        "name": "expiredPact",
                                         "nameLocation": "296:11:1",
                                         "nodeType": "VariableDeclaration",
                                         "scope": 748,
@@ -13209,7 +13209,7 @@
                                 "anonymous": false,
                                 "eventSelector": "2196ba14ee4208b2712aef3863d600e382bc249d06a7c7fb4b8de6ca0a20c298",
                                 "id": 778,
-                                "name": "BondCreated",
+                                "name": "PactCreated",
                                 "nameLocation": "758:11:1",
                                 "nodeType": "EventDefinition",
                                 "parameters": {
@@ -13613,7 +13613,7 @@
                                 "anonymous": false,
                                 "eventSelector": "d5a6750fd524c6f3d04c2a3f8e74b57e914efba5c7b8d9c1a17555eb7fb7052b",
                                 "id": 810,
-                                "name": "CouponClaimed",
+                                "name": "RewardClaimed",
                                 "nameLocation": "1178:13:1",
                                 "nodeType": "EventDefinition",
                                 "parameters": {
@@ -14034,7 +14034,7 @@
                                 "anonymous": false,
                                 "eventSelector": "a3b3bdc561eb537dfbd09e6351da6768868b71363d2606c0f98cbd174909e2f7",
                                 "id": 844,
-                                "name": "LiquidationCoupon",
+                                "name": "LiquidationReward",
                                 "nameLocation": "1543:17:1",
                                 "nodeType": "EventDefinition",
                                 "parameters": {
@@ -14135,7 +14135,7 @@
                                 "anonymous": false,
                                 "eventSelector": "21a3b5ce0deaf7365b800ddbcfd1d5db967d4f59d81e88e0fffa7a7051a091b1",
                                 "id": 850,
-                                "name": "LiquidationBond",
+                                "name": "LiquidationPact",
                                 "nameLocation": "1662:15:1",
                                 "nodeType": "EventDefinition",
                                 "parameters": {
@@ -14557,7 +14557,7 @@
                                 "implemented": false,
                                 "kind": "function",
                                 "modifiers": [],
-                                "name": "viewBondID",
+                                "name": "viewPactID",
                                 "nameLocation": "2086:10:1",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -14695,7 +14695,7 @@
                                 "implemented": false,
                                 "kind": "function",
                                 "modifiers": [],
-                                "name": "createNewBond",
+                                "name": "createNewPact",
                                 "nameLocation": "2214:13:1",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -14706,7 +14706,7 @@
                                             "constant": false,
                                             "id": 892,
                                             "mutability": "mutable",
-                                            "name": "_issuer",
+                                            "name": "_debtor",
                                             "nameLocation": "2245:7:1",
                                             "nodeType": "VariableDeclaration",
                                             "scope": 914,
@@ -14816,7 +14816,7 @@
                                             "constant": false,
                                             "id": 901,
                                             "mutability": "mutable",
-                                            "name": "_couponMaturity",
+                                            "name": "_rewardMaturity",
                                             "nameLocation": "2352:15:1",
                                             "nodeType": "VariableDeclaration",
                                             "scope": 914,
@@ -14852,7 +14852,7 @@
                                             "constant": false,
                                             "id": 903,
                                             "mutability": "mutable",
-                                            "name": "_expiredBond",
+                                            "name": "_expiredPact",
                                             "nameLocation": "2382:12:1",
                                             "nodeType": "VariableDeclaration",
                                             "scope": 914,
@@ -15005,7 +15005,7 @@
                                 "implemented": false,
                                 "kind": "function",
                                 "modifiers": [],
-                                "name": "showDeatailBondForId",
+                                "name": "showDeatailPactForId",
                                 "nameLocation": "2543:20:1",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -15098,7 +15098,7 @@
                                 "implemented": false,
                                 "kind": "function",
                                 "modifiers": [],
-                                "name": "claimCouponForUSer",
+                                "name": "claimRewardForUSer",
                                 "nameLocation": "2625:18:1",
                                 "nodeType": "FunctionDefinition",
                                 "parameters": {
@@ -15136,7 +15136,7 @@
                                             "constant": false,
                                             "id": 926,
                                             "mutability": "mutable",
-                                            "name": "_indexCoupon",
+                                            "name": "_indexReward",
                                             "nameLocation": "2659:12:1",
                                             "nodeType": "VariableDeclaration",
                                             "scope": 929,

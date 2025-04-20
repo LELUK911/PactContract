@@ -26,7 +26,7 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 // Standard for interface detection, allowing external systems to verify the supported interfaces of this contract.
 
-import "./interface/Ibond.sol";
+import "./interface/Ipact.sol";
 // Interface specific to the project's pact functionality, providing a standardized way to interact with bonds.
 
 import {DownwardAuctionStorage} from "./DownwardAuctionStorage.sol";

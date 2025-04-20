@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Leluk911
 pragma solidity ^0.8.24;
 
-interface IBondContract {
+interface IPactContract {
     struct Pact {
         uint id;
         address debtor;

@@ -18,7 +18,7 @@ import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
 import {PactStorage} from "./PactStorage.sol";
-import {IHelperPact} from "./interface/HelperBond.sol";
+import {IHelperPact} from "./interface/HelperPact.sol";
 
 contract PactContract is
     PactStorage,

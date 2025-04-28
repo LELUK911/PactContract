@@ -4,29 +4,42 @@ require("dotenv").config();
 // Aggiungi un delay per evitare conflitti di nonce
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
+const WETHaddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3"
+const daiAddress  = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
+const btcAddress  = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+
 const main = async () => {
     const provider = new ethers.JsonRpcProvider('https://testnet.skalenodes.com/v1/juicy-low-small-testnet');
     const owner = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
+    //0 Deploy Helper Pact
+    const HelperPact = await ethers.getContractFactory('HelperPact');
+    const helperPACT = await HelperPact.connect(owner).deploy();
+    await helperPACT.waitForDeployment();
+    const helperPACTAddress = await helperPACT.getAddress();
+    console.log("HelperPact deployed:", helperPACTAddress);
+    await delay(15000); // Attendi 15 secondi
+
+
 
     // 1. Deploy PactContract
-    const BondContractFactory = await ethers.getContractFactory("PactContract");
-    const pactContract = await BondContractFactory.connect(owner).deploy(owner.address);
+    const PactContractFactory = await ethers.getContractFactory("PactContract");
+    const pactContract = await PactContractFactory.connect(owner).deploy(owner.address,owner.address,helperPACTAddress);
     await pactContract.waitForDeployment();
-    const bondContractAddress = await pactContract.getAddress();
-    console.log("PactContract deployed:", bondContractAddress);
+    const pactContractAddress = await pactContract.getAddress();
+    console.log("PactContract deployed:", pactContractAddress);
 
     await delay(15000); // Attendi 15 secondi
 
     // 2. Deploy PactLaunch
-    const LaunchBondContract = await ethers.getContractFactory('PactLaunch');
-    const launchBondContract = await LaunchBondContract.connect(owner).deploy(bondContractAddress);
-    await launchBondContract.waitForDeployment();
-    const launchBondContractAddress = await launchBondContract.getAddress();
-    console.log("PactLaunch deployed:", launchBondContractAddress);
+    const LaunchPactContract = await ethers.getContractFactory('PactLaunch');
+    const launchPactContract = await LaunchPactContract.connect(owner).deploy(pactContractAddress);
+    await launchPactContract.waitForDeployment();
+    const launchPactContractAddress = await launchPactContract.getAddress();
+    console.log("PactLaunch deployed:", launchPactContractAddress);
 
     await delay(15000);
-
+/*
     // 3. Deploy Mock Tokens (sequenziale)
     const MockToken = await ethers.getContractFactory('MockToken');
     const mockWETH = await MockToken.deploy(ethers.parseUnits('90000000000000000000'), 'WETH', 'WETH');
@@ -49,15 +62,18 @@ const main = async () => {
     console.log("BTC deployed:", btcAddress);
 
     await delay(15000);
-
+*/
     // 4. Deploy UpwardAuction
     const UpwardAuction = await ethers.getContractFactory('UpwardAuction');
     const upwardAuctionContract = await UpwardAuction.connect(owner).deploy(
-        bondContractAddress,
+        pactContractAddress,
         daiAddress,
         ethers.parseUnits('1'),
         ethers.parseUnits('1000'),
-        100
+        100,
+        owner.address,
+        owner.address,
+        owner.address,
     );
     await upwardAuctionContract.waitForDeployment();
     const upwardAuctionContractAddress = await upwardAuctionContract.getAddress();
@@ -81,11 +97,14 @@ const main = async () => {
     // 6. Deploy DownwardAuction
     const downwardAuction = await ethers.getContractFactory('DownwardAuction');
     const downwardAuctionContract = await downwardAuction.connect(owner).deploy(
-        bondContractAddress,
+        pactContractAddress,
         daiAddress,
         ethers.parseUnits('1'),
         ethers.parseUnits('1000'),
-        100
+        100,
+        owner.address,
+        owner.address,
+        owner.address,
     );
     await downwardAuctionContract.waitForDeployment();
     const downwardAuctionContractAddress = await downwardAuctionContract.getAddress();
@@ -104,7 +123,7 @@ const main = async () => {
     await delay(5000);
     await pactContract.connect(owner).setTransfertFee(ethers.parseUnits('0.01'));
     await delay(5000);
-    await pactContract.connect(owner).setlauncherContract(launchBondContractAddress);
+    await pactContract.connect(owner).setlauncherContract(launchPactContractAddress);
     await delay(5000);
     await pactContract.connect(owner).setWETHaddress(WETHaddress);
     await delay(5000);
@@ -127,11 +146,11 @@ const main = async () => {
     console.log(``)
     console.log(``)
 
-    console.log(`Pact contract -> ${bondContractAddress}`)
+    console.log(`Pact contract -> ${pactContractAddress}`)
     console.log(``)
     console.log(``)
 
-    console.log(`Pact contract -> ${launchBondContractAddress}`)
+    console.log(`Pact contract -> ${launchPactContractAddress}`)
     console.log(``)
     console.log(``)
 

@@ -6,7 +6,7 @@ import {TimeManagment} from "./TimeManagement.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 
-contract HelperBond {
+contract HelperPact {
 
 
         /**

@@ -17,7 +17,7 @@ describe('Test Pact, stable version', () => {
     beforeEach(async () => {
         [owner, debtor, user1, user2, user3, user4,accountant] = await ethers.getSigners();
 
-        const HelperPact = await ethers.getContractFactory('HelperBond');
+        const HelperPact = await ethers.getContractFactory('HelperPact');
         const helperPact = await HelperPact.deploy()
         await helperPact.waitForDeployment()
         const helperAddress = await helperPact.getAddress()

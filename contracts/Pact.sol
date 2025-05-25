@@ -17,6 +17,7 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
+import {FullMath} from "./library/FullMath.sol";
 import {PactStorage} from "./PactStorage.sol";
 import {IHelperPact} from "./interface/HelperPact.sol";
 
@@ -30,7 +31,9 @@ contract PactContract is
     /**
      * @dev See {IERC165-supportsInterface}.
      */
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC1155, AccessControl) returns (bool) {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) public view virtual override(ERC1155, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
     /**
@@ -154,7 +157,6 @@ contract PactContract is
         require(msg.sender == pact[_id].debtor, "Only Debtor");
         _;
     }
-
 
     /**
      * @dev Ensures that the provided address is valid.
@@ -494,9 +496,15 @@ contract PactContract is
                 firstTransfer[id] = false;
             }
 
+            //! Update to verify
+            uint256 actualBalance = balanceOf(from, id);
+            uint256 amountToUpdate = amount > actualBalance
+                ? actualBalance
+                : amount;
+
             // Update scheduled reward ownership (subtract from `from`, add to `to`)
-            _upDateRewardSell(id, from, amount);
-            _upDateRewardBuy(id, to, amount);
+            _upDateRewardSell(id, from, amountToUpdate);
+            _upDateRewardBuy(id, to, amountToUpdate);
         }
 
         // Execute the actual ERC1155 batch transfer
@@ -592,7 +600,6 @@ contract PactContract is
         // Assign initial prize score (if applicable)
         _setInitialPrizePoint(currentId, msg.sender, _amount, _sizeLoan);
 
-
         _upDateRewardBuy(currentId, msg.sender, _amount); //! Check befor deploy in mainet
     }
 
@@ -607,6 +614,8 @@ contract PactContract is
         uint _id,
         uint8 _indexReward
     ) external whenNotPaused nonReentrant {
+        require(_id < pactId, "Invalid pact ID");
+        require(pact[_id].debtor != address(0), "Pact does not exist");
         _claimReward(_id, msg.sender, _indexReward);
     }
 
@@ -709,11 +718,12 @@ contract PactContract is
         for (uint i = 0; i < pact[_id].rewardMaturity.length; i++) {
             // Only remove scheduled reward rights for rewards that haven't matured yet
             if (time < pact[_id].rewardMaturity[i]) {
-                require(
-                    rewardToClaim[_id][_user][i] >= qty,
-                    "Insufficient rewards"
-                );
-                rewardToClaim[_id][_user][i] -= qty;
+                if (rewardToClaim[_id][_user][i] >= qty) {
+                    rewardToClaim[_id][_user][i] -= qty;
+                } else {
+                    // If users haven't lot reward, set 0
+                    rewardToClaim[_id][_user][i] = 0;
+                }
             }
         }
     }
@@ -1592,7 +1602,8 @@ contract PactContract is
         uint16 _fee
     ) internal returns (uint) {
         // Calculate the fee portion of the collateral
-        uint feeAmount = (_amountCollateral * _fee) / 1000;
+        //uint feeAmount = (_amountCollateral * _fee) / 1000;
+        uint feeAmount = FullMath.mulDiv(_amountCollateral, _fee, 1000);
 
         // Add it to the contract's fee balance
         balanceContractFeesForToken[_tokenAddress] += feeAmount;

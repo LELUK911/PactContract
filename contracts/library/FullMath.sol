@@ -85,7 +85,7 @@ library FullMath {
         // modulo 2**256 such that denominator * inv = 1 mod 2**256.
         // Compute the inverse by starting with a seed that is correct
         // correct for four bits. That is, denominator * inv = 1 mod 2**4
-        uint256 inv = (3 * denominator) ^ 2;
+        uint256 inv = (3 * denominator) ** 2;
         // Now use Newton-Raphson iteration to improve the precision.
         // Thanks to Hensel's lifting lemma, this also works in modular
         // arithmetic, doubling the correct bits in each step.

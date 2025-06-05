@@ -26,8 +26,6 @@ import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 // Standard for interface detection, allowing external systems to verify the supported interfaces of this contract.
 
-import "./interface/Ipact.sol";
-// Interface specific to the project's pact functionality, providing a standardized way to interact with bonds.
 
 import {DownwardAuctionStorage} from "./DownwardAuctionStorage.sol";
 // Storage contract that contains the state variables and mappings required for the DownwardAuction system.
@@ -224,6 +222,10 @@ contract DownwardAuction is
         emit PactAddressUpdated(previousAddress, _pactContrac); // Emits an event to log the update.
     }
 
+    event NewMoneyToken(
+        address indexed previousAddress,
+        address indexed newAddress
+    );
     /**
      * @dev Allows the owner to set or update the address of the money token (ERC20).
      *      This function can only be called by the contract owner and ensures reentrancy protection.
@@ -234,8 +236,17 @@ contract DownwardAuction is
         address _money
     ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
+        address previousAddress = money; // Stores the current money token address before updating.
         money = _money; // Updates the money token address.
+        emit NewMoneyToken(previousAddress, _money); // Emits an event to log the change.
     }
+
+
+    event NewFeeSystem(
+        uint fixedFee,
+        uint priceThreshold,
+        uint dinamicFee
+    );
 
     /**
      * @dev Allows the owner to set or update the fee system parameters.
@@ -250,11 +261,17 @@ contract DownwardAuction is
         uint _priceThreshold,
         uint _dinamicFee
     ) external onlyRole(OWNER_ROLE) nonReentrant {
-        require(_dinamicFee <= 10000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
+        require(_dinamicFee <= 10_000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
         feeSystem.dinamicFee = _dinamicFee; // Updates the dynamic fee.
+        emit NewFeeSystem(_fixedFee, _priceThreshold, _dinamicFee); // Emits an event to log the new fee system.
     }
+
+    event NewFeeSeller(
+        uint[] echelons,
+        uint[] fees
+    );
 
     /**
      * @dev Sets the fee tiers for the seller in the auction.
@@ -269,6 +286,7 @@ contract DownwardAuction is
     ) external virtual onlyRole(OWNER_ROLE) {
         feeSeller.echelons = _echelons; // Set the price thresholds
         feeSeller.fees = _fees; // Set the corresponding fees
+        emit NewFeeSeller(_echelons, _fees); // Emit event for fee seller update
     }
 
     /**
@@ -389,6 +407,8 @@ contract DownwardAuction is
         _emergencyCloseAuction(msg.sender, _index);
     }
 
+    event CoolDownUpdated(uint coolDown);
+
     /**
      * @dev Sets the cooldown period for making subsequent bids in an auction.
      * @param _coolDown The new cooldown period in seconds.
@@ -396,8 +416,10 @@ contract DownwardAuction is
      */
     function setCoolDown(uint _coolDown) external virtual onlyRole(OWNER_ROLE) {
         coolDown = _coolDown;
+        emit CoolDownUpdated(_coolDown); // Emit event for cooldown update
     }
 
+    event WithdrawFees(address indexed treasury, uint amount);
     /**
      * @dev Withdraws all accumulated fees from the contract to the owner's wallet.
      * @notice Only the contract owner can withdraw the fees.
@@ -407,6 +429,7 @@ contract DownwardAuction is
         uint amount = contractBalance; // Get the current contract balance
         contractBalance = 0; // Reset the contract balance to zero
         SafeERC20.safeTransfer(IERC20(money), treasury, amount); // Transfer fees to the owner
+        emit WithdrawFees(treasury, amount); // Emit event for fee withdrawal
     }
 
     /**

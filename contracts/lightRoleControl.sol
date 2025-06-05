@@ -12,14 +12,9 @@ contract LightRoleControl {
         accountant = _accountant;
     }
 
-    modifier onlyAccountant() {
-        require(msg.sender == accountant, "Only accountant can call this function");
-        _;
-    }
+  
 
-    function transferAccountant(address _newAccountant) internal onlyAccountant {
-        pendingAccountant = _newAccountant;
-    }
+
 
     function acceptAccountant() internal {
         require(msg.sender == pendingAccountant, "Only pendingAccountant can call this function");
@@ -28,11 +23,11 @@ contract LightRoleControl {
         emit AccountantshipTransferred(accountant, pendingAccountant);
     }
 
-    function getAccountant() public view returns (address) {
+    function getAccountant() external view returns (address) {
         return accountant;
     }
 
-    function getPendingAccountant() public view returns (address) {
+    function getPendingAccountant() external view returns (address) {
         return pendingAccountant;
     }
 

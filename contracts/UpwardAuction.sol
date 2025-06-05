@@ -22,20 +22,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol
 // Provides protection against reentrancy attacks by ensuring that a function cannot be re-entered
 // while it is already executing. This is critical for securing contract logic that handles external calls.
 
-import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-// Defines the interface for contracts that are intended to handle the receipt of ERC1155 tokens.
-// This is essential for contracts that need to safely receive or manage ERC1155 token transfers.
 
-import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
-// Interface for contracts that handle ERC1155 token receipts.
-
-import {ERC165} from "@openzeppelin/contracts/utils/introspection/ERC165.sol";
-// Implements the ERC165 standard for interface detection. This allows the contract to declare which
-// interfaces it supports, enabling other contracts and systems to query this information.
-
-import "./interface/Ipact.sol";
-// Custom interface specific to the project's pact functionality, providing a standardized way
-// for the contract to interact with pact-related operations or logic unique to this system.
 import {UpwardAuctionStorage} from "./UpwardAuctionStorage.sol";
 // Storage contract that contains the state variables and mappings required for the DownwardAuction system.
 
@@ -166,7 +153,7 @@ contract UpwardAuction is
      */
     function setNewPactAddress(
         address _pactContrac
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external nonReentrant onlyRole(OWNER_ROLE)  {
         require(_pactContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
             _pactContrac != pactContract,
@@ -179,6 +166,11 @@ contract UpwardAuction is
         emit PactAddressUpdated(previousAddress, _pactContrac); // Emits an event to log the update.
     }
 
+    event NewFeeSystem(
+        uint fixedFee,
+        uint priceThreshold,
+        uint dinamicFee
+    );
     /**
      * @dev Allows the owner to set or update the fee system parameters.
      *      The fee system includes a fixed fee, a price threshold, and a dynamic fee.
@@ -196,7 +188,14 @@ contract UpwardAuction is
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
         feeSystem.dinamicFee = _dinamicFee; // Updates the dynamic fee.
+        emit NewFeeSystem(
+            _fixedFee,
+            _priceThreshold,
+            _dinamicFee
+        ); // Emits an event to log the new fee system parameters.
     }
+
+    event NewMoneyTokenAddress(address indexed older, address indexed money);
 
     /**
      * @dev Allows the owner to set or update the address of the money token (ERC20).
@@ -208,7 +207,9 @@ contract UpwardAuction is
         address _money
     ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
+        address oldMoney = money; // Stores the current money token address before updating.
         money = _money; // Updates the money token address.
+        emit NewMoneyTokenAddress(oldMoney, _money); // Emits an event to log the update.
     }
 
     /**
@@ -809,7 +810,7 @@ contract UpwardAuction is
      */
     function showUserBalanceLock(
         address _user
-    ) public view virtual returns (uint) {
+    ) external view virtual returns (uint) {
         return lockBalance[_user];
     }
 

@@ -14,17 +14,10 @@ import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol
 // Import the SafeERC20 library, which wraps ERC20 operations to ensure safety by handling
 // potential issues like failed transfers and reentrancy attacks.
 
-import {IERC1155Receiver} from "@openzeppelin/contracts/token/ERC1155/IERC1155Receiver.sol";
-// Import the IERC1155Receiver interface, which specifies the required functions for contracts
-// that want to receive and manage ERC1155 tokens securely.
-
 import {PactLaunchStorage} from "./PactLaunchStorage.sol";
 // Import the PactLaunchStorage contract, which defines the storage structure and essential
 // variables for managing the pact launch system in the application.
 
-import "./interface/Ipact.sol";
-// Import the IPact interface, defining the standard methods for interacting with the pact
-// contract, ensuring seamless integration with pact-specific logic.
 
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
 // Import the Pausable contract, which provides the functionality to temporarily halt contract
@@ -43,7 +36,6 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 //import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 //import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/OwnableUpgradeable.sol";
 
-import {console} from "hardhat/console.sol";
 
 contract PactLaunch is
     PactLaunchStorage, // Inherits the storage structure and variables for the PactLaunch system.
@@ -116,6 +108,10 @@ contract PactLaunch is
         transferOwnership(_owner); // Transfers ownership to the specified owner address.
     }*/
 
+    event NewPactcontract(
+        address indexed _pactContract
+    );
+
     /**
      * @dev Sets the address of the pact contract.
      *      This function can only be called by the owner of the contract.
@@ -125,6 +121,7 @@ contract PactLaunch is
     function setPactContractAddress(address _pactContract) external onlyOwner {
         require(_pactContract != address(0), "set correct Address"); // Validates the pact contract address.
         pactContract = _pactContract; // Updates the pact contract address.
+        emit NewPactcontract(_pactContract); // Emits an event indicating the new pact contract address.
     }
 
     /**
@@ -415,7 +412,7 @@ contract PactLaunch is
     function balanceDebtor(
         address _user,
         address _token
-    ) public view returns (uint amount) {
+    ) external view returns (uint amount) {
         amount = balanceForToken[_user][_token]; // Retrieve the user's balance for the specified token.
     }
 
@@ -426,7 +423,7 @@ contract PactLaunch is
      */
     function showAmountInSellForPact(
         uint _id
-    ) public view returns (uint amount) {
+    ) external view returns (uint amount) {
         amount = amountInSell[_id]; // Retrieve the amount of pacts available for sale.
     }
 
@@ -451,7 +448,7 @@ contract PactLaunch is
      * @return _listPacts An array of pact IDs available for sale.
      */
     function showPactLaunchList()
-        public
+        external
         view
         returns (uint[] memory _listPacts)
     {
@@ -480,7 +477,7 @@ contract PactLaunch is
      * @param _id ID of the pact being searched.
      * @return uint Index of the pact in the array.
      */
-    function findIndexPact(uint _id) public view returns (uint) {
+    function findIndexPact(uint _id) external view returns (uint) {
         (uint index, ) = _srcIndexListPacts(_id); // Call the internal function to find the index.
         return index; // Return the index.
     }
@@ -504,7 +501,7 @@ contract PactLaunch is
      * @notice This function provides visibility into the pact contract address
      *         for external users or systems interacting with the contract.
      */
-    function showPactContractAddress() public view returns (address) {
+    function showPactContractAddress() external view returns (address) {
         return pactContract;
     }
 }

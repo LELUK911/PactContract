@@ -171,21 +171,6 @@ contract PactContract is
         _;
     }
 
-    /**
-     * @dev Ensures that the provided category value is valid.
-     *      The valid categories are:
-     *        - 1: mediumPenalties
-     *        - 2: highPenalties
-     *        - 3: lowPenalties
-     *        - 4: veryLowPenalties
-     *      Any other value will revert with an "Invalid category" error.
-     *
-     * @param category The category to validate.
-     */
-    modifier invalidCategory(uint category) {
-        require(category >= 1 && category <= 4, "Invalid category");
-        _;
-    }
 
     /**
      * @dev Constructor sets initial state:
@@ -336,7 +321,8 @@ contract PactContract is
     function updatePenalties(
         uint category,
         uint16[3] memory newPenalties
-    ) external onlyRole(OWNER_ROLE) invalidCategory(category) {
+    ) external onlyRole(OWNER_ROLE)  {
+        require(category >= 1 && category <= 4, "Invalid category");
         require(
             newPenalties.length == 3,
             "Array must contain exactly 3 values"
@@ -874,7 +860,7 @@ contract PactContract is
      * @param _user         The address claiming the scheduled reward.
      * @param _indexReward  The index in the pact's `rewardMaturity` array that identifies the scheduled reward.
      */
-    function _claimReward(uint _id, address _user, uint _indexReward) internal {
+    function _claimReward(uint _id, address _user, uint8 _indexReward) internal {
         Pact storage b = pact[_id];
         require(
             b.rewardMaturity[_indexReward] <= uint64(block.timestamp),
@@ -907,7 +893,7 @@ contract PactContract is
         ) {
             // 2) Not enough to pay even one scheduled reward
             _subtractionPrizePoin(_id, b.debtor, moltiplicator);
-            _executeLiquidationReward(_id, _user, moltiplicator);
+            _executeLiquidationReward(_id, _user, moltiplicator,_indexReward);
 
             // Scheduled Reward claimed is effectively zero, since nothing was paid
             emit RewardClaimed(_user, _id, 0);
@@ -916,7 +902,18 @@ contract PactContract is
             b.interest <= b.balancLoanRepay
         ) {
             // 3) Partial coverage: some rewards can be paid, but not all
-            _parzialLiquidationReward(_id, _user, moltiplicator);
+            _parzialLiquidationReward(_id, _user,_indexReward, moltiplicator);
+        }
+    }
+        // flag => id => indexReward =>address) 
+    mapping (address=>mapping(uint=>mapping(uint=>bool))) internal liquidationFlag;
+    function _setLiquidationFlag(
+        uint _id,
+        uint _indexReward,
+        address _user
+    ) internal {
+        if(!liquidationFlag[_user][_id][_indexReward]){
+            liquidationFlag[_user][_id][_indexReward] = true;
         }
     }
 
@@ -996,6 +993,7 @@ contract PactContract is
     function _parzialLiquidationReward(
         uint _id,
         address _user,
+        uint8 _indexReward,
         uint _moltiplicator
     ) internal {
         Pact storage b = pact[_id];
@@ -1021,7 +1019,7 @@ contract PactContract is
         _subtractionPrizePoin(_id, b.debtor, (_moltiplicator - rewardCanRepay));
 
         // Execute liquidation on remaining unpaid rewards (collateral usage)
-        _executeLiquidationReward(_id, _user, _moltiplicator - rewardCanRepay);
+        _executeLiquidationReward(_id, _user, _moltiplicator - rewardCanRepay,_indexReward);
     }
 
     /**
@@ -1042,20 +1040,24 @@ contract PactContract is
     function _executeLiquidationReward(
         uint _id,
         address _user,
-        uint _moltiplicator
+        uint _moltiplicator,
+        uint8 _indexReward
     ) internal {
         // Cattura in locale il numero di liquidazioni per evitare più SLOAD
         uint8 n = numberOfLiquidations[_id];
         require(n <= 4, "This pact is expired or totally liquidated");
-        n++;
-        numberOfLiquidations[_id] = n;
+        if(!liquidationFlag[_user][_id][_indexReward]){
+            _setLiquidationFlag(_id, _indexReward, _user);
+            n++;
+            numberOfLiquidations[_id] = n;
+        }
         if (n < 4) {
             _logicExecuteLiquidationReward(_id, n - 1, _moltiplicator, _user);
         } else {
             _logicExecuteLiquidationPact(_id, _moltiplicator, _user);
         }
     }
-
+    
     /**
      * @dev Partially liquidates the pact's collateral for a specific scheduled reward liquidation event.
      *      Applies a penalty based on the debtor's penalty tier (`_indexPenality`) and the user's claim multiplier.
@@ -1688,21 +1690,7 @@ contract PactContract is
         return _upDateBalanceUserFees(_tokenAddress, _amount, REWARD_FEE);
     }
 
-    /**
-     * @dev Calculates an expired fee at a fixed rate of 0.1% (represented as 10 millesimal),
-     *      then updates the contract’s fee balance.
-     *
-     * @param _tokenAddress The ERC20 token used for the fee.
-     * @param _amount       The amount on which the 0.1% fee is applied.
-     * @return The actual fee amount added to the contract.
-     */
-    function _expiredFee(
-        address _tokenAddress,
-        uint _amount
-    ) internal returns (uint) {
-        // Fixed 0.1% fee
-        return _upDateBalanceUserFees(_tokenAddress, _amount, 10);
-    }
+   
 
     /**
      * @dev Updates the contract fee balance by adding `(_amount * _fee) / 1000`.
@@ -1743,7 +1731,7 @@ contract PactContract is
      *
      * This function provides the upper limit of the total interest payout if all pact tokens are held and all rewards are claimed.
      */
-    function getMaxQtaInterest(uint _id) public view returns (uint) {
+    function getMaxQtaInterest(uint _id) external view returns (uint) {
         uint maxQtaInterest = (pact[_id].sizeLoan +
             (pact[_id].interest * pact[_id].rewardMaturity.length)) *
             _totalSupply[_id];
@@ -1761,7 +1749,7 @@ contract PactContract is
      * @param _id The ID of the pact for which the remaining interest deposit is queried.
      * @return The remaining amount of tokens that can still be deposited for interest.
      */
-    function getMissQtaInterest(uint _id) public view returns (uint) {
+    function getMissQtaInterest(uint _id) external view returns (uint) {
         return maxInterestDeposit[_id];
     }
 
@@ -1811,7 +1799,7 @@ contract PactContract is
      * @dev Returns the current value of the incremental pact ID counter.
      *      This indicates the ID that will be assigned to the next created pact.
      */
-    function viewPactID() public view returns (uint) {
+    function viewPactID() external view returns (uint) {
         return pactId;
     }
 
@@ -1819,7 +1807,7 @@ contract PactContract is
      * @dev Returns the total supply of a specific pact identified by its token ID.
      * @param id The unique ID of the pact/token.
      */
-    function totalSupply(uint256 id) public view returns (uint256) {
+    function totalSupply(uint256 id) external view returns (uint256) {
         return _totalSupply[id];
     }
 
@@ -1828,7 +1816,7 @@ contract PactContract is
      * @param _id The unique ID of the pact.
      * @return Pact The full Pact struct containing all relevant data.
      */
-    function showDeatailPactForId(uint _id) public view returns (Pact memory) {
+    function showDeatailPactForId(uint _id) external view returns (Pact memory) {
         return pact[_id];
     }
 

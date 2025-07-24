@@ -32,7 +32,6 @@ module.exports = {
   },
   etherscan: {
     apiKey: {
-      sepolia: process.env.ETHERSCAN_API_KEY,
       skaleTesnet: "PLACEHOLDER" // Deve matchare il nome della rete
     },
     customChains: [

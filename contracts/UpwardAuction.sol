@@ -153,7 +153,7 @@ contract UpwardAuction is
      */
     function setNewPactAddress(
         address _pactContrac
-    ) external nonReentrant onlyRole(OWNER_ROLE)  {
+    ) external  onlyRole(OWNER_ROLE)  {
         require(_pactContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
             _pactContrac != pactContract,
@@ -183,7 +183,7 @@ contract UpwardAuction is
         uint _fixedFee,
         uint _priceThreshold,
         uint _dinamicFee
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external onlyRole(OWNER_ROLE)  {
         require(_dinamicFee <= 10000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
@@ -205,7 +205,7 @@ contract UpwardAuction is
      */
     function setNewMoneyToken(
         address _money
-    ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
+    ) external onlyRole(ACCOUNTANT_ROLE)  {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
         address oldMoney = money; // Stores the current money token address before updating.
         money = _money; // Updates the money token address.
@@ -222,7 +222,7 @@ contract UpwardAuction is
     function setFeeSeller(
         uint[] memory _echelons,
         uint[] memory _fees
-    ) external virtual onlyRole(OWNER_ROLE) nonReentrant {
+    ) external virtual onlyRole(OWNER_ROLE)  {
         require(
             _echelons.length == _fees.length,
             "Echelons and fees length mismatch"

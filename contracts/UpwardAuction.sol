@@ -220,8 +220,8 @@ contract UpwardAuction is
      * @param _fees An array of fee percentages corresponding to each echelon.
      */
     function setFeeSeller(
-        uint[] memory _echelons,
-        uint[] memory _fees
+        uint[] calldata _echelons,
+        uint[] calldata _fees
     ) external virtual onlyRole(OWNER_ROLE)  {
         require(
             _echelons.length == _fees.length,
@@ -469,7 +469,7 @@ contract UpwardAuction is
             "This pot is low then start Price"
         );
 
-        if (auctions[_index].pot > auctions[_index].pot) {
+        if (auctions[_index].pot > 0) {
             require(
                 _amount <= ((auctions[_index].pot * MAX_POT_MULTIPLIER) / 100),
                 "Pot exceeds maximum allowed increment"

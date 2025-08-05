@@ -166,7 +166,7 @@ contract UpwardAuction is
      */
     function setNewPactAddress(
         address _pactContrac
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external onlyRole(OWNER_ROLE) {
         require(_pactContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
             _pactContrac != pactContract,
@@ -191,7 +191,7 @@ contract UpwardAuction is
         uint _fixedFee,
         uint _priceThreshold,
         uint _dinamicFee
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external onlyRole(OWNER_ROLE)  {
         require(_dinamicFee <= 10000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
@@ -206,7 +206,7 @@ contract UpwardAuction is
      */
     function setNewMoneyToken(
         address _money
-    ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
+    ) external onlyRole(ACCOUNTANT_ROLE)  {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
         money = _money; // Updates the money token address.
     }
@@ -219,8 +219,8 @@ contract UpwardAuction is
      * @param _fees An array of fee percentages corresponding to each echelon.
      */
     function setFeeSeller(
-        uint[] memory _echelons,
-        uint[] memory _fees
+        uint[] calldata _echelons,
+        uint[] calldata _fees
     ) external virtual onlyRole(OWNER_ROLE) nonReentrant {
         require(
             _echelons.length == _fees.length,
@@ -242,20 +242,21 @@ contract UpwardAuction is
      * @param _id The ID of the pact being auctioned.
      * @param _amount The number of pacts to include in the auction.
      * @param _startPrice The initial price for the auction.
-     * @param _expired The expiration timestamp of the auction.
+     * @param _duration The expiration timestamp of the auction.
      */
     function newAcutionPact(
         uint _id,
         uint _amount,
         uint _startPrice,
-        uint _expired
+        uint _duration
     ) external virtual nonReentrant whenNotPaused {
         require(_amount > 0, "Set correct pact's amount");
         require(_startPrice > 0, "Set correct start price");
         require(
-            _expired > (block.timestamp + minPeriodAuction),
-            "Set correct expired period"
+            _duration >= minPeriodAuction,
+            "Duration too short"
         );
+        uint _expired = block.timestamp + _duration; // Calculate the expiration time based on the current timestamp and duration
         _newAcutionPact(msg.sender, _id, _amount, _startPrice, _expired);
     }
 
@@ -468,7 +469,7 @@ contract UpwardAuction is
             "This pot is low then start Price"
         );
 
-        if (auctions[_index].pot > auctions[_index].pot) {
+        if (auctions[_index].pot > 0) {
             require(
                 _amount <= ((auctions[_index].pot * MAX_POT_MULTIPLIER) / 100),
                 "Pot exceeds maximum allowed increment"

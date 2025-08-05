@@ -211,7 +211,7 @@ contract DownwardAuction is
      */
     function setNewPactAddress(
         address _pactContrac
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external onlyRole(OWNER_ROLE) {
         require(_pactContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
             _pactContrac != pactContract,
@@ -232,7 +232,7 @@ contract DownwardAuction is
      */
     function setNewMoneyToken(
         address _money
-    ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
+    ) external onlyRole(ACCOUNTANT_ROLE)  {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
         money = _money; // Updates the money token address.
     }
@@ -249,7 +249,7 @@ contract DownwardAuction is
         uint _fixedFee,
         uint _priceThreshold,
         uint _dinamicFee
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external onlyRole(OWNER_ROLE)  {
         require(_dinamicFee <= 10000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
@@ -264,8 +264,8 @@ contract DownwardAuction is
      * @notice `_echelons` and `_fees` arrays must have the same length, and the echelons must be in ascending order.
      */
     function setFeeSeller(
-        uint[] memory _echelons,
-        uint[] memory _fees
+        uint[] calldata _echelons,
+        uint[] calldata _fees
     ) external virtual onlyRole(OWNER_ROLE) {
         feeSeller.echelons = _echelons; // Set the price thresholds
         feeSeller.fees = _fees; // Set the corresponding fees
@@ -276,7 +276,7 @@ contract DownwardAuction is
      * @param _id The unique identifier of the pact.
      * @param _amount The quantity of bonds to be auctioned.
      * @param _startPrice The starting price for the auction.
-     * @param _expired The expiration timestamp for the auction.
+     * @param _duration The expiration timestamp for the auction.
      * @param _tolleratedDiscount The maximum discount (in basis points) tolerated in the auction.
      * @notice The pact amount and starting price must be greater than 0.
      * @notice The expiration time must be at least `minPeriodAuction` in the future.
@@ -287,15 +287,16 @@ contract DownwardAuction is
         uint _id,
         uint _amount,
         uint _startPrice,
-        uint _expired,
+        uint _duration,
         uint _tolleratedDiscount
     ) external virtual nonReentrant whenNotPaused {
         require(_amount > 0, "Set correct pact's amount"); // Validate pact amount
         require(_startPrice > 0, "Set correct start price"); // Validate starting price
         require(
-            _expired > (block.timestamp + minPeriodAuction),
-            "Set correct expired period"
+            _duration >= minPeriodAuction,
+            "Duration too short"
         ); // Validate auction expiration
+        uint _expired = block.timestamp + _duration;
         require(
             _tolleratedDiscount <= 10000,
             "set correct tolleranze discount"

@@ -65,19 +65,19 @@ contract PactStorage {
 
     // Case 1: new user or medium range
     uint16[3] internal mediumPenalties = [
-        uint16(100),
-        uint16(200),
-        uint16(400)
+        100,
+        200,
+        400
     ];
     // C16ase 2: high score (>1M)
-    uint16[3] internal highPenalties = [uint16(50), uint16(100), uint16(200)];
+    uint16[3] internal highPenalties = [50, 100, 200];
     // C16ase 3: low score [500k, 700k)
-    uint16[3] internal lowPenalties = [uint16(200), uint16(400), uint16(600)];
+    uint16[3] internal lowPenalties = [200,400,600];
     // C16ase 4: very low score (<500k)
     uint16[3] internal veryLowPenalties = [
-        uint16(280),
-        uint16(450),
-        uint16(720)
+        280,
+        450,
+        720
     ];
 
     /**

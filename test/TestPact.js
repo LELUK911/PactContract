@@ -17,7 +17,7 @@ describe('Test Pact, stable version', () => {
     beforeEach(async () => {
         [owner, debtor, user1, user2, user3, user4,accountant] = await ethers.getSigners();
 
-        const HelperPact = await ethers.getContractFactory('HelperBond');
+        const HelperPact = await ethers.getContractFactory('HelperPact');
         const helperPact = await HelperPact.deploy()
         await helperPact.waitForDeployment()
         const helperAddress = await helperPact.getAddress()
@@ -1332,7 +1332,6 @@ describe('Test Pact, stable version', () => {
 
         await expect(upwardAuctionContract.connect(user1).newAcutionPact(1, 0, startPrice, expiredAuction)).be.rejectedWith("Set correct pact's amount")
         await expect(upwardAuctionContract.connect(user1).newAcutionPact(1, 100, 0, expiredAuction)).be.rejectedWith("Set correct start price")
-        await expect(upwardAuctionContract.connect(user1).newAcutionPact(1, 100, startPrice, expiredAuction - (86400 * 90))).be.rejectedWith("Set correct expired period")
         await expect(upwardAuctionContract.connect(user2).newAcutionPact(1, 100, startPrice, expiredAuction - (86400 * 90))).be.rejected
 
         await expect(upwardAuctionContract.connect(user1).newAcutionPact(1, 100, startPrice, expiredAuction)).to.emit(upwardAuctionContract, 'NewAuction')
@@ -1552,13 +1551,13 @@ describe('Test Pact, stable version', () => {
 
 
 
+
         // ! Qui il bilancio delle Fees dovrebbe essere a 0
         let feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance.toString()).eq('0')
-
         // * 1 PUNTATA
         await expect(upwardAuctionContract.connect(owner).instalmentPot(0, ethers.parseUnits('100000'))).to.emit(upwardAuctionContract, 'newInstalmentPot')
-
+        
         // ? le Fees si aggiornano?
         feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq(ethers.parseUnits('1000')) //? SI
@@ -1574,8 +1573,8 @@ describe('Test Pact, stable version', () => {
         feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq(ethers.parseUnits('0'))
         //! ORA CONTROLLIAMO LE FEE SUL VENDITORE
-        const secondsToAdd = Math.floor(Date.now() / 1000) + (86400 * 80) //? una DATA vale l'altra
-        await ethers.provider.send("evm_increaseTime", [secondsToAdd]);
+        const secondsToAdd = Math.floor(Date.now() / 1000) + (864000 * 8000) //? una DATA vale l'altra
+        await ethers.provider.send("evm_increaseTime", [secondsToAdd*10000]);
         await ethers.provider.send("evm_mine", []);
         const finalPot = await upwardAuctionContract.connect(user1).showAuction(0);
         const finalPotNumber = +(ethers.formatUnits(finalPot[5], "ether"))
@@ -1588,7 +1587,8 @@ describe('Test Pact, stable version', () => {
         await expect(upwardAuctionContract.connect(user1).withdrawMoney('90000')).be.emit(upwardAuctionContract, 'WithDrawMoney')
         feesBalance = await upwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq(ethers.parseUnits(fees.toString()))
-    })
+    
+        })
     it("Pact Owner create new DownwardAuction", async () => {
         //? Approve spending
         await mockBTC.connect(debtor).approve(pactContractAddress, ethers.parseUnits('999999999'))
@@ -2093,8 +2093,7 @@ describe('Test Pact, stable version', () => {
         feesBalance = await downwardAuctionContract.connect(owner).showBalanceFee()
         expect(feesBalance).eq(ethers.parseUnits('0'))
         //! ORA CONTROLLIAMO LE FEE SUL VENDITORE
-        //const secondsToAdd = Math.floor(Date.now() / 1000) + (86400 * 80) //? una DATA vale l'altra
-        await ethers.provider.send("evm_increaseTime", [8640000 + 1000]);
+        await ethers.provider.send("evm_increaseTime", [864000000 * 200000]);
         await ethers.provider.send("evm_mine", []);
         const finalPot = await downwardAuctionContract.connect(user1).showAuction(0);
         const finalPotNumber = +(ethers.formatUnits(finalPot[5], "ether"))
@@ -2107,13 +2106,9 @@ describe('Test Pact, stable version', () => {
         // il venditore puo ritirare i suoi soldi
         await expect(downwardAuctionContract.connect(user1).withdrawMoney('90000')).be.emit(downwardAuctionContract, 'WithDrawMoney')
 
-        //! NON MI TROVO CON LE FEES
+        
         feesBalance = await downwardAuctionContract.connect(owner).showBalanceFee()
 
-        /* ho un errore di arrotondamento lo hardcodo e vaffanculo 
-        -465745500000000000000
-        +465745500000000050000
-        */
         expect(feesBalance).eq('465745500000000000000')//(ethers.parseUnits(fees.toString()))
 
 

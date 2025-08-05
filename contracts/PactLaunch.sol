@@ -231,11 +231,7 @@ contract PactLaunch is
         require(_amount <= pactDetail.amount, "Set correct amount"); // Validate that the amount does not exceed the pact's total supply.
 
         _depositPact(_user, address(this), _id, _amount); // Transfer the pact from the user to the contract.
-        amountInSell[_id] = IERC1155(pactContract).balanceOf(
-            address(this),
-            _id
-        ); // Update the amount of pacts available for sale.
-
+        amountInSell[_id] += _amount;
         (, bool response) = _srcIndexListPacts(_id); // Check if the pact is already listed.
         if (!response) {
             listPacts.push(_id); // Add the pact to the list of pacts for sale.

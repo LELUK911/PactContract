@@ -9,7 +9,8 @@ const daiAddress  = "0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512"
 const btcAddress  = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
 
 const main = async () => {
-    const provider = new ethers.JsonRpcProvider('https://testnet.skalenodes.com/v1/juicy-low-small-testnet');
+    //const provider = new ethers.JsonRpcProvider('https://testnet.skalenodes.com/v1/juicy-low-small-testnet');
+    const provider = new ethers.JsonRpcProvider('https://mainnet.skalenodes.com/v1/elated-tan-skat');
     const owner = new ethers.Wallet(process.env.PRIVATE_KEY, provider);
 
     //0 Deploy Helper Pact
@@ -39,7 +40,7 @@ const main = async () => {
     console.log("PactLaunch deployed:", launchPactContractAddress);
 
     await delay(15000);
-/*
+
     // 3. Deploy Mock Tokens (sequenziale)
     const MockToken = await ethers.getContractFactory('MockToken');
     const mockWETH = await MockToken.deploy(ethers.parseUnits('90000000000000000000'), 'WETH', 'WETH');
@@ -62,7 +63,7 @@ const main = async () => {
     console.log("BTC deployed:", btcAddress);
 
     await delay(15000);
-*/
+
     // 4. Deploy UpwardAuction
     const UpwardAuction = await ethers.getContractFactory('UpwardAuction');
     const upwardAuctionContract = await UpwardAuction.connect(owner).deploy(

@@ -36,6 +36,7 @@ contract PactContract is
     ) public view virtual override(ERC1155, AccessControl) returns (bool) {
         return super.supportsInterface(interfaceId);
     }
+
     /**
      * @dev Emitted when a single safe transfer occurs (part of the custom logic).
      */
@@ -170,7 +171,6 @@ contract PactContract is
         require(_address != address(0), "Invalid Address");
         _;
     }
-
 
     /**
      * @dev Constructor sets initial state:
@@ -321,7 +321,7 @@ contract PactContract is
     function updatePenalties(
         uint category,
         uint16[3] memory newPenalties
-    ) external onlyRole(OWNER_ROLE)  {
+    ) external onlyRole(OWNER_ROLE) {
         require(category >= 1 && category <= 4, "Invalid category");
         require(
             newPenalties.length == 3,
@@ -464,9 +464,9 @@ contract PactContract is
             );
             balanceContractFeesForToken[WHET] += transfertFee * ids.length;
         }
-
+        uint256 idLength = ids.length;
         // Update scheduled reward ownership for each ID, and enforce 'firstTransfer' rules
-        for (uint256 i = 0; i < ids.length; ++i) {
+        for (uint256 i = 0; i < idLength; ++i) {
             uint256 id = ids[i];
             uint256 amount = amounts[i];
 
@@ -482,7 +482,7 @@ contract PactContract is
                 firstTransfer[id] = false;
             }
 
-            //! Update to verify
+           
             uint256 actualBalance = balanceOf(from, id);
             uint256 amountToUpdate = amount > actualBalance
                 ? actualBalance
@@ -558,10 +558,19 @@ contract PactContract is
 
         // Update the debtor's score and charge an issuance fee
         _setScoreForUser(msg.sender);
-        uint fee = _emisionPactFee(msg.sender, _tokenCollateral, _collateral);
+        // Measure balance before and after transfer to determine actual received amount
+        uint256 balanceBefore = IERC20(_tokenCollateral).balanceOf(
+            address(this)
+        );
 
         // Transfer collateral from debtor to this contract
         _depositCollateralToken(msg.sender, _tokenCollateral, _collateral);
+
+        uint256 balanceAfter = IERC20(_tokenCollateral).balanceOf(
+            address(this)
+        );
+        uint256 received = balanceAfter - balanceBefore;
+        uint fee = _emisionPactFee(msg.sender, _tokenCollateral, received);
 
         // Prepare a unique pact ID
         uint currentId = pactId;
@@ -577,7 +586,7 @@ contract PactContract is
             _rewardMaturity,
             _expiredPact,
             _tokenCollateral,
-            _collateral - fee, // subtract the issuance fee
+            received - fee, // subtract the issuance fee
             0, // balancLoanRepay starts at 0
             _amount,
             _describes
@@ -683,7 +692,8 @@ contract PactContract is
      */
     function _upDateRewardBuy(uint _id, address _user, uint qty) internal {
         uint64 time = uint64(block.timestamp);
-        for (uint8 i = 0; i < pact[_id].rewardMaturity.length; i++) {
+        uint8 length = uint8(pact[_id].rewardMaturity.length);
+        for (uint8 i = 0; i < length; i++) {
             // Only grant scheduled reward rights for rewards that haven't reached maturity yet
             if (time < pact[_id].rewardMaturity[i]) {
                 rewardToClaim[_id][_user][i] += qty;
@@ -701,7 +711,8 @@ contract PactContract is
      */
     function _upDateRewardSell(uint _id, address _user, uint qty) internal {
         uint64 time = uint64(block.timestamp);
-        for (uint i = 0; i < pact[_id].rewardMaturity.length; i++) {
+        uint length = pact[_id].rewardMaturity.length;
+        for (uint i = 0; i < length; i++) {
             // Only remove scheduled reward rights for rewards that haven't matured yet
             if (time < pact[_id].rewardMaturity[i]) {
                 if (rewardToClaim[_id][_user][i] >= qty) {
@@ -860,7 +871,11 @@ contract PactContract is
      * @param _user         The address claiming the scheduled reward.
      * @param _indexReward  The index in the pact's `rewardMaturity` array that identifies the scheduled reward.
      */
-    function _claimReward(uint _id, address _user, uint8 _indexReward) internal {
+    function _claimReward(
+        uint _id,
+        address _user,
+        uint8 _indexReward
+    ) internal {
         Pact storage b = pact[_id];
         require(
             b.rewardMaturity[_indexReward] <= uint64(block.timestamp),
@@ -893,7 +908,7 @@ contract PactContract is
         ) {
             // 2) Not enough to pay even one scheduled reward
             _subtractionPrizePoin(_id, b.debtor, moltiplicator);
-            _executeLiquidationReward(_id, _user, moltiplicator,_indexReward);
+            _executeLiquidationReward(_id, _user, moltiplicator, _indexReward);
 
             // Scheduled Reward claimed is effectively zero, since nothing was paid
             emit RewardClaimed(_user, _id, 0);
@@ -902,17 +917,20 @@ contract PactContract is
             b.interest <= b.balancLoanRepay
         ) {
             // 3) Partial coverage: some rewards can be paid, but not all
-            _parzialLiquidationReward(_id, _user,_indexReward, moltiplicator);
+            _parzialLiquidationReward(_id, _user, _indexReward, moltiplicator);
         }
     }
-        // flag => id => indexReward =>address) 
-    mapping (address=>mapping(uint=>mapping(uint=>bool))) internal liquidationFlag;
+
+    // flag => id => indexReward =>address)
+    mapping(address => mapping(uint => mapping(uint => bool)))
+        internal liquidationFlag;
+
     function _setLiquidationFlag(
         uint _id,
         uint _indexReward,
         address _user
     ) internal {
-        if(!liquidationFlag[_user][_id][_indexReward]){
+        if (!liquidationFlag[_user][_id][_indexReward]) {
             liquidationFlag[_user][_id][_indexReward] = true;
         }
     }
@@ -1019,7 +1037,12 @@ contract PactContract is
         _subtractionPrizePoin(_id, b.debtor, (_moltiplicator - rewardCanRepay));
 
         // Execute liquidation on remaining unpaid rewards (collateral usage)
-        _executeLiquidationReward(_id, _user, _moltiplicator - rewardCanRepay,_indexReward);
+        _executeLiquidationReward(
+            _id,
+            _user,
+            _moltiplicator - rewardCanRepay,
+            _indexReward
+        );
     }
 
     /**
@@ -1046,7 +1069,7 @@ contract PactContract is
         // Cattura in locale il numero di liquidazioni per evitare più SLOAD
         uint8 n = numberOfLiquidations[_id];
         require(n <= 4, "This pact is expired or totally liquidated");
-        if(!liquidationFlag[_user][_id][_indexReward]){
+        if (!liquidationFlag[_user][_id][_indexReward]) {
             _setLiquidationFlag(_id, _indexReward, _user);
             n++;
             numberOfLiquidations[_id] = n;
@@ -1057,7 +1080,7 @@ contract PactContract is
             _logicExecuteLiquidationPact(_id, _moltiplicator, _user);
         }
     }
-    
+
     /**
      * @dev Partially liquidates the pact's collateral for a specific scheduled reward liquidation event.
      *      Applies a penalty based on the debtor's penalty tier (`_indexPenality`) and the user's claim multiplier.
@@ -1334,34 +1357,22 @@ contract PactContract is
 
         if (score == 0 || (score >= 700000 && score <= 1000000)) {
             // Caso: nuovo utente o punteggio nella fascia "media" [700k, 1M]
-            uint16[3] memory penalties = [
-                uint16(100),
-                uint16(200),
-                uint16(400)
-            ];
+            uint16[3] memory penalties = [100, 200, 400];
             conditionOfFee[_user] = ConditionOfFee(penalties, 700100);
             emit ScoreUpdated(_user, 700100);
         } else if (score > 1000000) {
             // Caso: punteggio alto (>1M)
-            uint16[3] memory penalties = [uint16(50), uint16(100), uint16(200)];
+            uint16[3] memory penalties = [uint16(50), 100, 200];
             conditionOfFee[_user].penalityForLiquidation = penalties;
             emit ScoreUpdated(_user, 100000);
         } else if (score >= 500000 && score < 700000) {
             // Caso: punteggio basso [500k, 700k)
-            uint16[3] memory penalties = [
-                uint16(200),
-                uint16(400),
-                uint16(600)
-            ];
+            uint16[3] memory penalties = [200, 400, 600];
             conditionOfFee[_user].penalityForLiquidation = penalties;
             emit ScoreUpdated(_user, 500000);
         } else {
             // Caso: punteggio molto basso (<500k)
-            uint16[3] memory penalties = [
-                uint16(280),
-                uint16(450),
-                uint16(720)
-            ];
+            uint16[3] memory penalties = [280, 450, 720];
             conditionOfFee[_user].penalityForLiquidation = penalties;
             emit ScoreUpdated(_user, 499999);
         }
@@ -1690,8 +1701,6 @@ contract PactContract is
         return _upDateBalanceUserFees(_tokenAddress, _amount, REWARD_FEE);
     }
 
-   
-
     /**
      * @dev Updates the contract fee balance by adding `(_amount * _fee) / 1000`.
      *      (e.g. if _fee = 50, that's 5%. If _fee = 10, that's 1%.)
@@ -1816,7 +1825,9 @@ contract PactContract is
      * @param _id The unique ID of the pact.
      * @return Pact The full Pact struct containing all relevant data.
      */
-    function showDeatailPactForId(uint _id) external view returns (Pact memory) {
+    function showDeatailPactForId(
+        uint _id
+    ) external view returns (Pact memory) {
         return pact[_id];
     }
 

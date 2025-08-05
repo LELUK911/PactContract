@@ -209,7 +209,7 @@ contract DownwardAuction is
      */
     function setNewPactAddress(
         address _pactContrac
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external onlyRole(OWNER_ROLE)  {
         require(_pactContrac != address(0), "Invalid contract address"); // Validates that the address is non-zero.
         require(
             _pactContrac != pactContract,
@@ -234,7 +234,7 @@ contract DownwardAuction is
      */
     function setNewMoneyToken(
         address _money
-    ) external onlyRole(ACCOUNTANT_ROLE) nonReentrant {
+    ) external onlyRole(ACCOUNTANT_ROLE)  {
         require(_money != address(0), "Invalid token address"); // Validates the new token address.
         address previousAddress = money; // Stores the current money token address before updating.
         money = _money; // Updates the money token address.
@@ -260,7 +260,7 @@ contract DownwardAuction is
         uint _fixedFee,
         uint _priceThreshold,
         uint _dinamicFee
-    ) external onlyRole(OWNER_ROLE) nonReentrant {
+    ) external onlyRole(OWNER_ROLE)  {
         require(_dinamicFee <= 10_000, "Dynamic fee cannot exceed 100%"); // Validates dynamic fee.
         feeSystem.fixedFee = _fixedFee; // Updates the fixed fee.
         feeSystem.priceThreshold = _priceThreshold; // Updates the price threshold.
